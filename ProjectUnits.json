@@ -1,0 +1,21 @@
+{
+  "FlyWheel": {
+    "FlywheelsIO.setSpeed(speed)": "DutyCycle",
+    "FlyWheelsInputs.appliedVolts": "Volts",
+    "FlywheelsIO.setTargetRPM(rpm)": "RPM",
+    "FlywheelsIO.applyOutput(volts)": "Volts",
+    "FlyWheelsInputs.velocityRPM": "RPM",
+    "FlyWheelsInputs.targetRPM": "RPM"
+  },
+  "Intake": {
+    "IntakeInputs.rollsRPS": "RPS",
+    "IntakeInputs.angulatorAppliedVolts": "Volts",
+    "IntakeInputs.rollsAppliedVolts": "Volts",
+    "IntakeIO.setAngulatorPosition(position)": "Degrees",
+    "IntakeIO.setRollsVoltage(volts)": "Volts",
+    "IntakeIO.setAngulatorVoltage(volts)": "Volts",
+    "IntakeInputs.angulatorTargetAngle": "Degrees",
+    "IntakeInputs.angulatorPosition": "Degrees",
+    "IntakeIO.setRollsRPS(rps)": "RPS"
+  }
+}

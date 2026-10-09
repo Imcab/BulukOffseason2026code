@@ -1,0 +1,32 @@
+task findTodos {
+    doLast {
+        def srcDir = file("src/main/java")
+        def foundTodos = false
+        
+        println "\n\u001B[36m\u001B[1m[MARS]\u001B[0m Searching for pending tasks on the robot..."
+
+        if (srcDir.exists()) {
+            srcDir.eachFileRecurse { file ->
+                if (file.name.endsWith(".java")) {
+                    def lineNumber = 1
+                    file.eachLine { line ->
+                        def upperLine = line.toUpperCase()
+                        if (upperLine.contains("// TODO") || upperLine.contains("// FIXME")) {
+
+                            println "  \u001B[33m ${file.name}:${lineNumber} -> ${line.trim()}\u001B[0m"
+                            foundTodos = true
+                        }
+                        lineNumber++
+                    }
+                }
+            }
+        }
+        
+        if (!foundTodos) {
+            println "  \u001B[32m Robot Code found with no pending tasks.\u001B[0m"
+        }
+        println "================================================================\n"
+    }
+}
+
+compileJava.dependsOn findTodos

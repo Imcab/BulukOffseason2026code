@@ -1,0 +1,24 @@
+gradle.buildFinished { buildResult ->
+    if (buildResult.failure == null) {
+        
+        def c1 = "\u001B[31m"
+        def c2 = "\u001B[38;5;208m"
+        def c3 = "\u001B[33m"
+        def reset = "\u001B[0m"
+        def bold = "\u001B[1m"
+
+        def logo = """
+${c1}${bold}    __  ______    ____  _____   ${reset}
+${c1}${bold}   /  |/  /   |  / __ \\/ ___/   ${reset}
+${c2}${bold}  / /|_/ / /| | / /_/ /\\__ \\    ${reset}
+${c2}${bold} / /  / / ___ |/ _, _/___/ /    ${reset}
+${c3}${bold}/_/  /_/_/  |_/_/ |_|/____/     ${reset}
+${reset}${bold}     S T Z   R O B O T I C S    ${reset}
+        """
+        
+        println ""
+        println logo
+        println "${bold}[MARS]${reset} Framework compiled and inyected successfully."
+        println "================================================================"
+    }
+}
