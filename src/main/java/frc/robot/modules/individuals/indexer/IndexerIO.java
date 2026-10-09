@@ -1,5 +1,6 @@
 package frc.robot.modules.individuals.indexer;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.stzteam.features.marsprocessor.Fallback;
 import com.stzteam.features.unitprocessor.Unit;
 import com.stzteam.mars.models.singlemodule.Data;
@@ -98,4 +99,5 @@ public interface IndexerIO extends IO<IndexerIO.IndexerInputs> {
     /**
      * Stops the the indexer system (both roller and index)
      */
+
 }

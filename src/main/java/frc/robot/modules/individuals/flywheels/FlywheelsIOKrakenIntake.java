@@ -61,4 +61,9 @@ public class FlywheelsIOKrakenIntake implements FlywheelsIO {
         // nothing
     }
 
+    @Override
+    public TalonFX getMotor(){
+        return intakeFlyWheels;
+    }
+
 }

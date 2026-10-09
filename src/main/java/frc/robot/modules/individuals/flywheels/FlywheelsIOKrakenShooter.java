@@ -89,4 +89,9 @@ public class FlywheelsIOKrakenShooter implements FlywheelsIO {
     public void setSpeed(double speed){
         leaderShooter.set(speed);
     }
+
+    @Override
+    public TalonFX getMotor(){
+        return leaderShooter;
+    }
 }

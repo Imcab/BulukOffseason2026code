@@ -1,5 +1,6 @@
 package frc.robot.modules.individuals.flywheels;
  
+import com.ctre.phoenix6.hardware.TalonFX;
 import com.stzteam.features.marsprocessor.Fallback;
 import com.stzteam.features.unitprocessor.Unit;
 import com.stzteam.mars.models.singlemodule.Data;
@@ -28,5 +29,7 @@ public interface FlywheelsIO extends IO<FlywheelsIO.FlyWheelsInputs> {
   public void setSpeed(@Unit(value = "DutyCycle", group = "FlyWheel") double speed);
 
   public void setTargetRPM(@Unit(value = "RPM", group = "FlyWheel") double rpm);
+
+  public TalonFX getMotor();
 
 }

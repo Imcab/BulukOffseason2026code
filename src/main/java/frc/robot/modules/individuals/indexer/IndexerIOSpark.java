@@ -32,6 +32,9 @@ public class IndexerIOSpark implements IndexerIO {
         rollController = rollMotor.getClosedLoopController();
         indexController = indexMotor.getClosedLoopController();
 
+        rollConfig.smartCurrentLimit(30);
+        indexConfig.smartCurrentLimit(30);
+
         rollConfig
             .idleMode(IdleMode.kCoast)
             .inverted(true)

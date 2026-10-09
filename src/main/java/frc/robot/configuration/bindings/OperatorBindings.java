@@ -130,6 +130,7 @@ public class OperatorBindings implements Binding {
   
     // ----- Disparo -----
 
+    dpad.down().whileTrue(new DumperTestCommand(shooter.getActor().getMotor(), shooter));
     // D-pad arriba: shooter a kShootRPM; cuando llega, el indexer libera las piezas.
     // Una vez que empieza a liberar sigue alimentando aunque las RPM bajen por el disparo.
     // Al soltar, ambos regresan a idle.
@@ -153,4 +154,6 @@ public class OperatorBindings implements Binding {
                                 .withRollers(IndexerConstants.kShootRollerVolts)
                                 .withIndex(IndexerConstants.kShootIndexVolts)))));
   }
+
+  
 }
