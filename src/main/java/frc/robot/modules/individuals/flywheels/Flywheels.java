@@ -46,6 +46,11 @@ public class Flywheels extends ModularSubsystem<FlyWheelsInputs, FlywheelsIO>
     return MathUtil.isNear(inputs.targetRPM, inputs.velocityRPM, toleranceRPM);
   }
 
+  /** Compara contra un RPM explicito (no depende de que el request ya haya escrito targetRPM). */
+  public boolean isAtRPM(double rpm, double toleranceRPM) {
+    return MathUtil.isNear(rpm, inputs.velocityRPM, toleranceRPM);
+  }
+
   @Override
   public Command setControl(Supplier<FlywheelsRequest> request) {
     return runRequest(request);

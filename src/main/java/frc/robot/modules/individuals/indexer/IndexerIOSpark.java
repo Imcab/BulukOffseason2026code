@@ -23,7 +23,7 @@ public class IndexerIOSpark implements IndexerIO {
     SparkClosedLoopController indexController;
 
     public IndexerIOSpark() {
-        rollMotor = new SparkMax(IndexerConstants.indexID, MotorType.kBrushless);
+        rollMotor = new SparkMax(IndexerConstants.rollerID, MotorType.kBrushless);
         indexMotor = new SparkMax(IndexerConstants.indexID, MotorType.kBrushless);
 
         rollConfig = new SparkMaxConfig();

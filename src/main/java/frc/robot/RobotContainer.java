@@ -12,28 +12,49 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.configuration.Manifest;
 import frc.robot.configuration.Manifest.ControlsBuilder;
+import frc.robot.configuration.Manifest.DrivetrainBuilder;
+import frc.robot.configuration.bindings.DriverBindings;
 import frc.robot.configuration.bindings.OperatorBindings;
 import frc.robot.modules.individuals.flywheels.Flywheels;
+import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
+import frc.robot.modules.swerve.CommandSwerveDrivetrain;
 import frc.tests.EmptyTest;
 
 public class RobotContainer implements IRobotContainer{
 
+  public final ControllerOI driver;
+
   public final ControllerOI operator;
+
+  public final CommandSwerveDrivetrain drivetrain;
 
   public final Intake intake;
 
   public final Flywheels shooter;
 
+  public final Indexer indexer;
+
   public RobotContainer() {
 
+    this.driver = ControlsBuilder.buildDriver();
+
     this.operator = ControlsBuilder.buildOperator();
+
+    // null si HAS_DRIVETRAIN = false en el Manifest
+    this.drivetrain = DrivetrainBuilder.buildModule();
 
     this.intake = Manifest.buildIntake();
 
     this.shooter = Manifest.buildShooter();
 
-    OperatorBindings.create(operator, intake, shooter).bind();
+    this.indexer = Manifest.buildIndexer();
+
+    if (drivetrain != null) {
+      DriverBindings.create(drivetrain, driver).bind();
+    }
+
+    OperatorBindings.create(operator, intake, shooter, indexer).bind();
   }
 
   @Override

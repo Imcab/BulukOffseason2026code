@@ -14,5 +14,6 @@ public class KeyManager {
     public static final BlackboardKey<Boolean> myBlackBoardKeyBoolean = new BlackboardKey<>(myKey, Boolean.class);
     public static final String INTAKE_KEY = "Intake";
     public static final String SHOOTER_KEY = "Shooter";
+    public static final String INDEXER_KEY = "Indexer";
     
 }

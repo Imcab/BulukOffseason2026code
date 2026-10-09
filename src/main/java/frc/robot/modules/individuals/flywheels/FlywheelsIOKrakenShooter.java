@@ -39,11 +39,11 @@ public class FlywheelsIOKrakenShooter implements FlywheelsIO {
     public void configMotor(){
         var limitConfigs = leaderConfig.CurrentLimits;
 
-        limitConfigs.SupplyCurrentLimitEnable = shooterWheelsConstants.SupplyCurrentLimitEnable;
-        limitConfigs.SupplyCurrentLimit = shooterWheelsConstants.SupplyCurrentLimit;
+        // limitConfigs.SupplyCurrentLimitEnable = shooterWheelsConstants.SupplyCurrentLimitEnable;
+        // limitConfigs.SupplyCurrentLimit = shooterWheelsConstants.SupplyCurrentLimit;
 
-        limitConfigs.StatorCurrentLimit = shooterWheelsConstants.StatorCurrentLimit;
-        limitConfigs.StatorCurrentLimitEnable = shooterWheelsConstants.StatorCurrentLimitEnable;
+        // limitConfigs.StatorCurrentLimit = shooterWheelsConstants.StatorCurrentLimit;
+        // limitConfigs.StatorCurrentLimitEnable = shooterWheelsConstants.StatorCurrentLimitEnable;
 
         // Coast: el flywheel se frena solo al soltar (Brake por default lo para de golpe)
         leaderConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
