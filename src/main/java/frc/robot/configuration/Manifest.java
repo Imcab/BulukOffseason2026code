@@ -2,11 +2,20 @@ package frc.robot.configuration;
 
 import com.stzteam.mars.builder.Environment;
 import com.stzteam.mars.builder.Environment.RunMode;
+import com.stzteam.mars.builder.Injector;
 import com.stzteam.mars.operator.ControllerOI;
 import com.stzteam.mars.operator.PS5OI;
 import com.stzteam.mars.operator.XboxOI;
 
 import frc.robot.configuration.constants.swerve.TunerConstants;
+import frc.robot.modules.individuals.flywheels.Flywheels;
+import frc.robot.modules.individuals.flywheels.FlywheelsIO;
+import frc.robot.modules.individuals.flywheels.FlywheelsIOFallback;
+import frc.robot.modules.individuals.flywheels.FlywheelsIOKrakenShooter;
+import frc.robot.modules.individuals.intake.Intake;
+import frc.robot.modules.individuals.intake.IntakeIO;
+import frc.robot.modules.individuals.intake.IntakeIOFallback;
+import frc.robot.modules.individuals.intake.IntakeSpark;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
 import frc.robot.modules.swerve.SwerveTelemetry;
 
@@ -33,9 +42,10 @@ public class Manifest {
     public static final boolean HAS_SHOOTER_WHELLS = true;
     public static final boolean HAS_INTAKE_FLYWHELLS = true;
     public static final boolean HAS_INTAKE_WHEELS = true;
+    public static final boolean HAS_INTAKE = true;
 
     /* CTRE SignalLogger (hoot logs on the USB drive). Must be on to record SysId data */
-    public static final boolean ENABLE_SIGNAL_LOGGER = true;
+    public static final boolean ENABLE_SIGNAL_LOGGER = false;
 
     public static class ControlsBuilder {
     
@@ -64,6 +74,24 @@ public class Manifest {
     
             return drivetrain;
             }
+    }
+
+    public static Intake buildIntake() {
+        // Sin IO de simulacion por ahora: en SIM usa el fallback
+        IntakeIO io =
+            Injector.createIO(HAS_INTAKE, IntakeIOFallback::new, IntakeSpark::new, IntakeIOFallback::new);
+        return new Intake(io);
+    }
+
+    public static Flywheels buildShooter() {
+        // Sin IO de simulacion por ahora: en SIM usa el fallback
+        FlywheelsIO io =
+            Injector.createIO(
+                HAS_SHOOTER_WHELLS,
+                FlywheelsIOFallback::new,
+                FlywheelsIOKrakenShooter::new,
+                FlywheelsIOFallback::new);
+        return new Flywheels(io, KeyManager.SHOOTER_KEY);
     }
 
     

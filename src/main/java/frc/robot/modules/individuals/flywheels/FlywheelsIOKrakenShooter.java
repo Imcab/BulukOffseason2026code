@@ -7,6 +7,7 @@ import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import frc.robot.configuration.constants.modules.FlywheelsConstants.shooterWheelsConstants;
 
@@ -43,6 +44,10 @@ public class FlywheelsIOKrakenShooter implements FlywheelsIO {
 
         limitConfigs.StatorCurrentLimit = shooterWheelsConstants.StatorCurrentLimit;
         limitConfigs.StatorCurrentLimitEnable = shooterWheelsConstants.StatorCurrentLimitEnable;
+
+        // Coast: el flywheel se frena solo al soltar (Brake por default lo para de golpe)
+        leaderConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+        followerConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
 
         var slot0Configs = leaderConfig.Slot0;
 

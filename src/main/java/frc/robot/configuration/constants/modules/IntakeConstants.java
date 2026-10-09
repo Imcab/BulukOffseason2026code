@@ -1,70 +1,72 @@
 package frc.robot.configuration.constants.modules;
 
 public class IntakeConstants {
-        
-    public static int intakeRatio = 1;
-    public static int rollsSparkID = 0;
-    public static int angulatorSparkID = 13;
 
-    public static final double kGearRatio = 9;
+  public static final int Angulator_MOTOR_CAN_ID = 13;
 
-    // ====================== ANGULADOR (brazo que baja a recoger) ======================
-    // Convencion: 0 grados = brazo GUARDADO (arriba, donde enciende el robot).
-    // Positivo = hacia el piso. Si tu motor gira al reves, cambia kAngulatorInverted.
+  // Solo para simulacion (SingleJointedArmSim)
+  public static final double kGearRatio = 20.0;
+  public static final double kIntakeLengthMeters = 0.4;
+  public static final double kIntakeMassKg = 6.7;
 
-    /** true = kP/kI/kD/kG/kS editables en SmartDashboard ("Intake/kP", ...). false en competencia. */
-    public static final boolean kAngulatorTuningMode = true;
+  // ---------------- Motor (NEO + SparkMax) ----------------
+  public static final boolean kMotorInverted = false; // Equivale a CounterClockwise_Positive del Kraken, verificar en robot
+  public static final int kCurrentLimit = 40;
+  public static final double kMaxVolts = 12.0;
 
-    /** CONFIRMAR: vueltas del motor por 1 vuelta del brazo. */
-    public static final double kAngulatorReduction = kGearRatio;
-    public static final double kDegreesPerMotorRotation = 360.0 / kAngulatorReduction;
-    public static final boolean kAngulatorInverted = false;
+  // ---------------- Conversion ----------------
+  // Misma reduccion que el Kraken (SensorToMechanismRatio = 36)
+  public static final double kMotorToMechanismRatio = 36.0;
+  // El modulo completo trabaja en grados del mecanismo
+  public static final double kPositionFactor = 360.0 / kMotorToMechanismRatio; // grados por vuelta de motor
+  public static final double kVelocityFactor = kPositionFactor / 60.0; // RPM -> grados/s
 
-    public static final double kStowAngleDeg = 0.0;
-    /** MEDIR: grados desde guardado hasta tocar el piso / posicion de recoleccion. */
-    public static final double kDeployAngleDeg = 130.0;
+  // ---------------- Setpoints (grados, rango del intake: 0 a 40) ----------------
+  public static final double kUpAngle = 0;
+  public static final double kDownAngle = 35;
+  public static final double kToleranceDegrees = 3.0;
 
-    public static final double kSoftLimitMarginDeg = 5.0;
+  // Voltaje de prueba para configurar (B = positivo, RB = negativo). Empezar bajo y subir poco a poco
+  public static final double kTestVolts = 1;
 
-    // Valores de PARTIDA, no calibrados. kP = duty cycle por grado de error.
-    public static final double kAngulatorP = 0.005;
-    public static final double kAngulatorI = 0.0;
-    public static final double kAngulatorD = 0.0;
-    /** Feedforward en volts: kG*cos(angulo + offset) + kS*signo(error). kG puede salir NEGATIVO. */
-    public static final double kAngulatorG = 0.0;
-    public static final double kAngulatorS = 0.0;
-    /** Guardado vertical -> -90 (la gravedad crece con sin(angulo)); guardado horizontal -> 0. */
-    public static final double kAngulatorCosOffsetDeg = 0.0;
+  // ---------------- Soft limits (grados) ----------------
+  // Activar en cuanto se confirme la direccion del motor (B debe hacer que la posicion suba).
+  // Forward debe ser el mayor.
+  public static final boolean kSoftLimitsEnabled = false;
+  public static final double kForwardLimitDegrees = 40;
+  public static final double kReverseLimitDegrees = 0;
 
-    public static final double kAngulatorMinOutput = -0.5;
-    public static final double kAngulatorMaxOutput = 0.5;
-    public static final int kAngulatorCurrentLimit = 30;
-    public static final double kMaxVolts = 12.0;
+  // ---------------- MAXMotion (grados/s, grados/s^2) ----------------
+  // NEO libre ~5676 RPM / 36 ~= 945 grados/s en el mecanismo.
+  // Recorrido de 40 grados: empezar lento (~0.5 s) y subir cuando ya este afinado
+  public static final double kCruiseVelocity = 120;
+  public static final double kMaxAcc = 240;
+  public static final double kAllowedErrorDegrees = 1.0;
 
-    //sim
-    public static double MOIRolls = 0.0; // I =1/3 mL^2
-    public static double rollsGearing = 0.0;
-    public static int numRollsMotors = 0;
+  // ---------------- Slot 0 (UP) ----------------
+  // Convertido desde el Kraken: PID en V/rot -> duty cycle/grado ( / 12 / 360 ), FF en volts
+  public static final double kP_Up = 0; // ~0.0042
+  public static final double kI_Up = 0;
+  public static final double kD_Up = 0; // Re-tunear, unidades de REV distintas a Phoenix
 
-    public static double MOIAngulator = 0.0; // I =1/3 mL^2
-    public static double angulatorGearing = 0.0;
-    public static int numAngulatorMotors = 0;
-    public static double armLength = 0.0; //metros
-    public static double minAngle = 0.0;
-    public static double maxAngle = 0.0;
+  public static final double kS_Up = 3.5; // V
+  public static final double kV_Up = 2; // V por grado/s
+  public static final double kA_Up = 1.0 / 360.0; // V por grado/s^2
+  public static final double kG_Up = 1; // V para sostener el intake horizontal (kG del Kraken)
 
-    //SJA
-    public static double maxVelocity = 0.0; 
-    public static double maxAcceleration = 0.0;
+  // ---------------- Slot 1 (DOWN) ----------------
+  public static final double kP_Down = 15.0 / 12.0 / 360.0; // ~0.0035
+  public static final double kI_Down = 0; // Kraken tenia 0.05, agregar solo si hay error estable
+  public static final double kD_Down = 0;
 
-    //request
-    public static double toleranceDegrees = 3.0; //tolerancia para angulador (grados)
+  public static final double kS_Down = 0.9;
+  public static final double kV_Down = 4.1 / 360.0;
+  public static final double kA_Down = 0;
+  public static final double kG_Down = 1; // El Kraken no tenia kG en este slot
 
-    //pid
-    public static double kP = 0.0;
-    public static double kI = 0.0;
-    public static double kD = 0.0;
-    public static double kMinOutput = 0.0;
-    public static double kMaxOutput = 0.0;  
-
+  // ---------------- Gravedad ----------------
+  // Lecturas del encoder en las dos posiciones de referencia. La gravedad se calcula en codigo
+  // (el kCos de REV asume 0 = horizontal y no acepta offset).
+  public static final double kVerticalPosition = 0; // guardado, sin torque de gravedad
+  public static final double kHorizontalPosition = 40; // acostado al piso, torque maximo
 }

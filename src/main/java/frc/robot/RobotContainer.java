@@ -5,15 +5,36 @@
 package frc.robot;
 
 import com.stzteam.mars.models.containers.IRobotContainer;
+import com.stzteam.mars.operator.ControllerOI;
 import com.stzteam.mars.test.TestRoutine;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.configuration.Manifest;
+import frc.robot.configuration.Manifest.ControlsBuilder;
+import frc.robot.configuration.bindings.OperatorBindings;
+import frc.robot.modules.individuals.flywheels.Flywheels;
+import frc.robot.modules.individuals.intake.Intake;
 import frc.tests.EmptyTest;
 
 public class RobotContainer implements IRobotContainer{
 
-  public RobotContainer() {}
+  public final ControllerOI operator;
+
+  public final Intake intake;
+
+  public final Flywheels shooter;
+
+  public RobotContainer() {
+
+    this.operator = ControlsBuilder.buildOperator();
+
+    this.intake = Manifest.buildIntake();
+
+    this.shooter = Manifest.buildShooter();
+
+    OperatorBindings.create(operator, intake, shooter).bind();
+  }
 
   @Override
   public void updateNodes() {}

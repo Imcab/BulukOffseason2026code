@@ -40,6 +40,11 @@ public class FlywheelsConstants {
 
         public static double idleVoltage = 0;
 
+        // Valores iniciales de prueba. Se pueden cambiar en vivo desde Shooter/Tuning/TestVolts y TestRPM
+        // (en MARS el shooter giraba con RPM negativas, ej. -3580)
+        public static final double kTestVolts = 4.0;
+        public static final double kTestRPM = 2000;
+
         public static final double RPM_0_1 = 0;
         public static final double RPM_1_2 = 0;
         public static final double RPM_2_3 = 0;
