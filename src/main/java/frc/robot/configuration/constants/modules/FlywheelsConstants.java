@@ -5,6 +5,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 public class FlywheelsConstants {
 
     public class IntakeWheelsConstants {
+
             
         public static final int IntakeWheels_ID = 14;
 
@@ -38,7 +39,7 @@ public class FlywheelsConstants {
         public static final double kI = 0;
         public static final double kD = 0;
 
-        public static double idleVoltage = 0;
+        public static double idleVoltage = 1;
 
         // Valores iniciales de prueba. Se pueden cambiar en vivo desde Shooter/Tuning/TestVolts y TestRPM
         // (en MARS el shooter giraba con RPM negativas, ej. -3580)

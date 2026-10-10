@@ -23,6 +23,7 @@ import frc.robot.modules.individuals.intake.Intake;
 import frc.robot.modules.individuals.intake.IntakeSpark.intakeMODE;
 import frc.robot.requests.DumperRequest;
 import frc.robot.requests.DumperRequestFactory;
+import frc.robot.requests.FlywheelsRequest;
 import frc.robot.requests.FlywheelsRequestFactory;
 import frc.robot.requests.IndexerRequest;
 import frc.robot.requests.IndexerRequestFactory;
@@ -36,6 +37,8 @@ public class OperatorBindings implements Binding {
 
   private final Intake intake;
   private final Flywheels shooter;
+private final Flywheels intakFlywheels;
+
   private final Indexer indexer;
   private final Dumper dumper;
 private final double DEADBAND = 0.1;
@@ -46,17 +49,18 @@ private final double DEADBAND = 0.1;
   private static final String TEST_RPM_KEY = "Tuning/TestRPM";
 
   private OperatorBindings(
-      ControllerOI operator, Intake intake, Flywheels shooter, Indexer indexer, Dumper dumper) {
+      ControllerOI operator, Intake intake, Flywheels shooter, Indexer indexer, Dumper dumper, Flywheels intakFlywheels) {
     this.operator = operator;
     this.intake = intake;
     this.shooter = shooter;
     this.indexer = indexer;
     this.dumper = dumper;
+    this.intakFlywheels = intakFlywheels;
   }
 
   public static OperatorBindings create(
-      ControllerOI operator, Intake intake, Flywheels shooter, Indexer indexer, Dumper dumper) {
-    return new OperatorBindings(operator, intake, shooter, indexer, dumper);
+      ControllerOI operator, Intake intake, Flywheels shooter, Indexer indexer, Dumper dumper, Flywheels intakFlywheels) {
+    return new OperatorBindings(operator, intake, shooter, indexer, dumper, intakFlywheels);
   }
 
   @Override
@@ -107,7 +111,7 @@ private final double DEADBAND = 0.1;
 
 
     // B: voltaje positivo de prueba / RB: voltaje negativo de prueba
-    buttons.right().whileTrue(dumper.voltageCommand(1));
+    //buttons.right().whileTrue(dumper.voltageCommand(1));
     //bumpers.right().whileTrue(intake.voltageCommand(-IntakeConstants.kTestVolts));
 
     // ----- Indexer (mientras se mantenga presionado, al soltar regresa a idle) -----
@@ -138,14 +142,20 @@ private final double DEADBAND = 0.1;
                                     KeyManager.SHOOTER_KEY,
                                     TEST_VOLTS_KEY,
                                     shooterWheelsConstants.kTestVolts))));
-
-    
   
+
     dpad.right().whileTrue(
-        dumper.setControl(
-            () -> DumperRequestFactory.moveVoltage().withVolts(8)
+        intakFlywheels.setControl(
+            () -> FlywheelsRequestFactory.moveVoltage().withVolts(-8)
         )
     );
+    
+  
+    // dpad.right().whileTrue(
+    //     dumper.setControl(
+    //         () -> DumperRequestFactory.moveVoltage().withVolts(8)
+    //     )
+    // );
     // ----- Disparo -----
 
     dpad.down().whileTrue(new DumperTestCommand(shooter.getActor().getMotor(), shooter));
@@ -167,6 +177,7 @@ private final double DEADBAND = 0.1;
                 shooterWheelsConstants.kShootRPM,
                 shooterWheelsConstants.kRPMTolerance)).debounce(0.3)),
         // 2) alimenta solo mientras las RPM no caigan más de 400 RPM
+
         indexer.setControl(() ->
                 IndexerRequestFactory.processing()
                     .withRollers(IndexerConstants.kShootRollerVolts)

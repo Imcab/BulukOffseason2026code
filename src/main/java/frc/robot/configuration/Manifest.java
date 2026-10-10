@@ -15,7 +15,9 @@ import frc.robot.modules.individuals.Dumper.DumperSpark;
 import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.flywheels.FlywheelsIO;
 import frc.robot.modules.individuals.flywheels.FlywheelsIOFallback;
+import frc.robot.modules.individuals.flywheels.FlywheelsIOKrakenIntake;
 import frc.robot.modules.individuals.flywheels.FlywheelsIOKrakenShooter;
+import frc.robot.modules.individuals.flywheels.Flywheels.idleMode;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.indexer.IndexerIO;
 import frc.robot.modules.individuals.indexer.IndexerIOFallback;
@@ -99,8 +101,20 @@ public class Manifest {
                 FlywheelsIOFallback::new,
                 FlywheelsIOKrakenShooter::new,
                 FlywheelsIOFallback::new);
-        return new Flywheels(io, KeyManager.SHOOTER_KEY);
+        return new Flywheels(io, KeyManager.SHOOTER_KEY, idleMode.outakeIDLE);
     }
+
+      public static Flywheels buildFlywheelIntake() {
+    FlywheelsIO io =
+        Injector.createIO(
+            HAS_INTAKE_WHEELS,
+            FlywheelsIOFallback::new,
+            FlywheelsIOKrakenIntake::new,
+            FlywheelsIOFallback::new);
+
+    return new Flywheels(io, KeyManager.FLYWHEEL_INTAKE_KEY, idleMode.intakeIDLE);
+  }
+
 
     public static Indexer buildIndexer() {
         // Sin IO de simulacion por ahora: en SIM usa el fallback

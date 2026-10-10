@@ -34,6 +34,8 @@ public class RobotContainer implements IRobotContainer{
 
   public final Flywheels shooter;
 
+  public final Flywheels intakFlywheels;
+
   public final Indexer indexer;
 
   public final Dumper dumper;
@@ -53,13 +55,15 @@ public class RobotContainer implements IRobotContainer{
 
     this.indexer = Manifest.buildIndexer();
 
+    this.intakFlywheels = Manifest.buildFlywheelIntake();
+
     this.dumper = Manifest.builDumper();
 
     if (drivetrain != null) {
       DriverBindings.create(drivetrain, driver).bind();
     }
 
-    OperatorBindings.create(operator, intake, shooter, indexer, dumper).bind();
+    OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels).bind();
   }
 
   @Override
