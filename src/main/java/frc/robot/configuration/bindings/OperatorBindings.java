@@ -85,12 +85,10 @@ private final double DEADBAND = 0.1;
     buttons
         .bottom()
         .whileTrue(
-            intake.setControl(
-                () ->
-                    IntakeRequestFactory.setAngle()
-                        .withAngle(-138 )
-                        .Tolerance(IntakeConstants.kToleranceDegrees)
-                        .withMode(intakeMODE.kDOWN)));
+            shooter.setControl(
+                () -> FlywheelsRequestFactory.setRPM().toRPM(2000))
+            );
+            
 
     // X: resetear el encoder a 0 en la posicion actual
     buttons.left().onTrue(intake.seed());
@@ -180,7 +178,7 @@ private final double DEADBAND = 0.1;
         bumpers.right().whileTrue(
             Commands.parallel(
                 indexer.setControl(
-                    () -> IndexerRequestFactory.setIndex().withRPM(-4500)
+                    () -> IndexerRequestFactory.setIndex().withRPM(-5500)
                 )
             
             )
@@ -189,7 +187,7 @@ private final double DEADBAND = 0.1;
         bumpers.left().whileTrue(
             Commands.parallel(
                 indexer.setControl(
-                    () -> IndexerRequestFactory.setRollers().withRPM(-4500)
+                    () -> IndexerRequestFactory.setRollers().withRPM(-5500)
                 )
             )
         );

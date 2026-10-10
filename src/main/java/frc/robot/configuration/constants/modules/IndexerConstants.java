@@ -20,12 +20,12 @@ public class IndexerConstants {
     public static final double kIndexTestVolts = -12;
 
     /** Voltajes para liberar las piezas al disparar, cuando el shooter llega a su RPM. Negativo = alimenta. */
-    public static final double kShootRollerVolts = -8;
-    public static final double kShootIndexVolts = -8;
+    public static final double kShootRollerVolts = -12;
+    public static final double kShootIndexVolts = -12;
 
     // ---------------- ROLLERS EN RPM (disparo) ----------------
     /** RPM del motor de los rollers al disparar. Negativo = alimenta (igual que ProcessSpeed(-x)). */
-    public static final double kRollerFeedRPM = -3000;
+    public static final double kRollerFeedRPM = -4500;
 
     // PID del SparkMax (slot 0). kP en salida por RPM de error; empieza bajo y sube si tarda en llegar.
     public static final double kRollerP = 0.0002;

@@ -46,7 +46,7 @@ public class FlywheelsConstants {
         public static final double kTestRPM = 3000;
 
         /** RPM del shooter para disparar (D-pad arriba del operador) */
-        public static final double kShootRPM = 4500;
+        public static final double kShootRPM = 4400;
 
         public static final double RPM_0_1 = 0;
         public static final double RPM_1_2 = 0;

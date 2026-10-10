@@ -2,6 +2,8 @@ package frc.robot.modules.individuals.flywheels;
 
 import java.util.function.Supplier;
 
+import com.stzteam.features.dictionary.Dictionary.CommonTables;
+import com.stzteam.features.dictionary.Dictionary.CommonTables.Terminology;
 import com.stzteam.forgemini.io.NetworkIO;
 import com.stzteam.mars.diagnostics.ModuleColorCode;
 import com.stzteam.mars.diagnostics.StatusColorCode.Severity;
@@ -20,6 +22,15 @@ import frc.robot.requests.FlywheelsRequestFactory;
 public class Flywheels extends ModularSubsystem<FlyWheelsInputs, FlywheelsIO>
     implements FlywheelsCommands {
 
+    public String subKey;
+
+    public enum idleMode {
+      intakeIDLE,
+      outakeIDLE
+    }
+
+    public idleMode mode;
+
   public static final ModuleColorCode IDLE =
       ModuleColorCode.solid("IDLE", Severity.OK, Color.kDarkGreen, "Flywheel en reposo");
   public static final ModuleColorCode ON_TARGET =
@@ -31,15 +42,24 @@ public class Flywheels extends ModularSubsystem<FlyWheelsInputs, FlywheelsIO>
       ModuleColorCode.solid(
           "MANUAL_CONTROL", Severity.WARNING, Color.kBrown, "Control manual: %.2fV");
 
-  public Flywheels(FlywheelsIO io, String key) {
+
+
+  public Flywheels(FlywheelsIO io, String key, idleMode mode) {
     super(
         SubsystemBuilder.<FlyWheelsInputs, FlywheelsIO>setup()
             .key(key)
             .hardware(io, new FlyWheelsInputs())
-            .request(FlywheelsRequestFactory.idle())
+            .request(FlywheelsRequestFactory.idleIntake())
             .telemetry(new FlywheelsTelemetry(key)));
 
-    this.setDefaultCommand(runRequest(() -> FlywheelsRequestFactory.idle()));
+    this.mode = mode;
+    this.subKey = key;
+
+    if (mode == idleMode.intakeIDLE) {
+      this.setDefaultCommand(runRequest(() -> FlywheelsRequestFactory.idleIntake()));
+    } else {
+      this.setDefaultCommand(runRequest(() -> FlywheelsRequestFactory.idleOutake()));
+    }
   }
 
   public boolean isAtTarget(double toleranceRPM) {
@@ -50,6 +70,11 @@ public class Flywheels extends ModularSubsystem<FlyWheelsInputs, FlywheelsIO>
   public boolean isAtRPM(double rpm, double toleranceRPM) {
     return MathUtil.isNear(rpm, inputs.velocityRPM, toleranceRPM);
   }
+  
+  
+  public FlyWheelsInputs getState() {
+    return inputs;
+  }
 
   @Override
   public Command setControl(Supplier<FlywheelsRequest> request) {
@@ -57,6 +82,10 @@ public class Flywheels extends ModularSubsystem<FlyWheelsInputs, FlywheelsIO>
   }
 
   public static class FlywheelsTelemetry extends Telemetry<FlyWheelsInputs> {
+
+    private static final String VELOCITY_RPM_KEY = CommonTables.VELOCITY_KEY + Terminology.RPM;
+    private static final String APPLIED_VOLTS_KEY = CommonTables.APPLIED_KEY + Terminology.VOLTS;
+    private static final String TARGET_RPM_KEY = CommonTables.TARGET_KEY + Terminology.RPM;
 
     private final String key;
 
