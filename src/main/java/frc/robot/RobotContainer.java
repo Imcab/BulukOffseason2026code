@@ -15,6 +15,7 @@ import frc.robot.configuration.Manifest.ControlsBuilder;
 import frc.robot.configuration.Manifest.DrivetrainBuilder;
 import frc.robot.configuration.bindings.DriverBindings;
 import frc.robot.configuration.bindings.OperatorBindings;
+import frc.robot.modules.individuals.Dumper.Dumper;
 import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
@@ -35,6 +36,8 @@ public class RobotContainer implements IRobotContainer{
 
   public final Indexer indexer;
 
+  public final Dumper dumper;
+
   public RobotContainer() {
 
     this.driver = ControlsBuilder.buildDriver();
@@ -50,11 +53,13 @@ public class RobotContainer implements IRobotContainer{
 
     this.indexer = Manifest.buildIndexer();
 
+    this.dumper = Manifest.builDumper();
+
     if (drivetrain != null) {
       DriverBindings.create(drivetrain, driver).bind();
     }
 
-    OperatorBindings.create(operator, intake, shooter, indexer).bind();
+    OperatorBindings.create(operator, intake, shooter, indexer, dumper).bind();
   }
 
   @Override

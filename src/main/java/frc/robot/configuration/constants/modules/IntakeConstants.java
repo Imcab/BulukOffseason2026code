@@ -16,24 +16,24 @@ public class IntakeConstants {
 
   // ---------------- Conversion ----------------
   // Misma reduccion que el Kraken (SensorToMechanismRatio = 36)
-  public static final double kMotorToMechanismRatio = 36.0;
+  public static final double kMotorToMechanismRatio = 36;
   // El modulo completo trabaja en grados del mecanismo
   public static final double kPositionFactor = 360.0 / kMotorToMechanismRatio; // grados por vuelta de motor
   public static final double kVelocityFactor = kPositionFactor / 60.0; // RPM -> grados/s
 
   // ---------------- Setpoints (grados, rango del intake: 0 a 40) ----------------
   public static final double kUpAngle = 0;
-  public static final double kDownAngle = 35;
+  public static final double kDownAngle = 160;
   public static final double kToleranceDegrees = 3.0;
 
   // Voltaje de prueba para configurar (B = positivo, RB = negativo). Empezar bajo y subir poco a poco
-  public static final double kTestVolts = 1;
+  public static final double kTestVolts = 8;
 
   // ---------------- Soft limits (grados) ----------------
   // Activar en cuanto se confirme la direccion del motor (B debe hacer que la posicion suba).
   // Forward debe ser el mayor.
-  public static final boolean kSoftLimitsEnabled = false;
-  public static final double kForwardLimitDegrees = 40;
+  public static final boolean kSoftLimitsEnabled = true;
+  public static final double kForwardLimitDegrees = 180;
   public static final double kReverseLimitDegrees = 0;
 
   // ---------------- MAXMotion (grados/s, grados/s^2) ----------------

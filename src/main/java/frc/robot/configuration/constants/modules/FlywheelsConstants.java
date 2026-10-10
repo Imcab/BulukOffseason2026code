@@ -27,26 +27,26 @@ public class FlywheelsConstants {
         public static final double StatorCurrentLimit = 120;
         public static final boolean StatorCurrentLimitEnable = false;
 
-        public static final double kRPMTolerance = 400;
+        public static final double kRPMTolerance = 200;
 
         public static final double kGearRatio = 3.0;
 
-        public static final double kS = 8;
-        public static final double kV = 0.8;
+        public static final double kS = 0.57;
+        public static final double kV = 0.12;
 
-        public static final double kP = 15;
+        public static final double kP = 0.6;
         public static final double kI = 0;
-        public static final double kD = 0.01;
+        public static final double kD = 0;
 
         public static double idleVoltage = 0;
 
         // Valores iniciales de prueba. Se pueden cambiar en vivo desde Shooter/Tuning/TestVolts y TestRPM
         // (en MARS el shooter giraba con RPM negativas, ej. -3580)
         public static final double kTestVolts = 12.0;
-        public static final double kTestRPM = 2000;
+        public static final double kTestRPM = 3000;
 
         /** RPM del shooter para disparar (D-pad arriba del operador) */
-        public static final double kShootRPM = 4350;
+        public static final double kShootRPM = 4500;
 
         public static final double RPM_0_1 = 0;
         public static final double RPM_1_2 = 0;

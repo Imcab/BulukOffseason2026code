@@ -15,5 +15,6 @@ public class KeyManager {
     public static final String INTAKE_KEY = "Intake";
     public static final String SHOOTER_KEY = "Shooter";
     public static final String INDEXER_KEY = "Indexer";
+    public static final String DUMPER_KEY = "Dumper";
     
 }

@@ -8,6 +8,10 @@ import com.stzteam.mars.operator.PS5OI;
 import com.stzteam.mars.operator.XboxOI;
 
 import frc.robot.configuration.constants.swerve.TunerConstants;
+import frc.robot.modules.individuals.Dumper.Dumper;
+import frc.robot.modules.individuals.Dumper.DumperIO;
+import frc.robot.modules.individuals.Dumper.DumperIOFallback;
+import frc.robot.modules.individuals.Dumper.DumperSpark;
 import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.flywheels.FlywheelsIO;
 import frc.robot.modules.individuals.flywheels.FlywheelsIOFallback;
@@ -107,6 +111,18 @@ public class Manifest {
                 IndexerIOSpark::new,
                 IndexerIOFallback::new);
         return new Indexer(io);
+    }
+
+    public static Dumper builDumper(){
+        DumperIO io =
+            Injector.createIO(
+                HAS_DUMPER,
+                DumperIOFallback::new, 
+                DumperSpark::new, 
+                DumperIOFallback::new);
+
+        return new Dumper(io);
+
     }
 
     

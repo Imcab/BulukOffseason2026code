@@ -27,5 +27,15 @@
     "IntakeIO.applyOutput(volts)": "Volts",
     "IntakeInputs.position": "Degrees",
     "IntakeInputs.profileSetpoint": "Degrees"
+  },
+  "Dumper": {
+    "DumperInputs.profileSetpoint": "Degrees",
+    "DumperInputs.position": "Degrees",
+    "DumperInputs.velocity": "DegreesPerSecond",
+    "DumperInputs.targetAngle": "Degrees",
+    "DumperInputs.profileVelocity": "DegreesPerSecond",
+    "DumperIO.setPosition(Angle)": "Degrees",
+    "DumperInputs.appliedVolts": "Volts",
+    "DumperIO.applyOutput(volts)": "Volts"
   }
 }
