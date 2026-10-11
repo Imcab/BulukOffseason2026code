@@ -55,7 +55,7 @@ public class Manifest {
     public static final boolean HAS_INTAKE = true;
 
     /* CTRE SignalLogger (hoot logs on the USB drive). Must be on to record SysId data */
-    public static final boolean ENABLE_SIGNAL_LOGGER = false;
+    public static final boolean ENABLE_SIGNAL_LOGGER = true;
 
     public static class ControlsBuilder {
     

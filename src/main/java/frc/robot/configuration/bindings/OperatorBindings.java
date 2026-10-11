@@ -81,21 +81,23 @@ private final double DEADBAND = 0.1;
     Trigger leftStickXTrigger = new Trigger(() -> Math.abs(leftStick.x().getAsDouble()) > DEADBAND);
     Trigger leftStickYTrigger = new Trigger(() -> Math.abs(leftStick.y().getAsDouble()) > DEADBAND);
 
-    // ----- Intake (mientras se mantenga presionado, al soltar regresa a idle) -----
-
-
-
-    // A: bajar el intake
-    buttons
-        .bottom()
+   buttons
+        .right()
         .whileTrue(
-            shooter.setControl(
-                () -> FlywheelsRequestFactory.setRPM().toRPM(2000))
-            );
+            intake.setControl(
+                () -> IntakeRequestFactory.moveVoltage().withVolts(12)
+            ));
+          
+               buttons
+        .left()
+        .whileTrue(
+            intake.setControl(
+                () -> IntakeRequestFactory.moveVoltage().withVolts(-12)
+            ));
             
 
     // X: resetear el encoder a 0 en la posicion actual
-    buttons.left().onTrue(intake.seed());
+    //buttons.left().onTrue(intake.seed());
 
 
     // Y: subir el intake
@@ -104,10 +106,16 @@ private final double DEADBAND = 0.1;
         .whileTrue(
             intake.setControl(
                 () ->
-                    IntakeRequestFactory.setAngle()
-                        .withAngle(0)
-                        .Tolerance(IntakeConstants.kToleranceDegrees)
-                        .withMode(intakeMODE.kUP)));
+                    IntakeRequestFactory.setAngle().withAngle(1).withMode(intakeMODE.kUP)));
+
+    // B: bajar el intake
+
+    buttons
+        .bottom()
+        .whileTrue(
+            intake.setControl(
+                () ->
+                    IntakeRequestFactory.setAngle().withAngle(60).withMode(intakeMODE.kDOWN)));
 
 
     // B: voltaje positivo de prueba / RB: voltaje negativo de prueba

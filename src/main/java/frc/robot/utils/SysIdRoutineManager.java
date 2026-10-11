@@ -27,7 +27,7 @@ public class SysIdRoutineManager {
             new SysIdRoutine.Config(
                 null,
                 Volts.of(4),
-                null,
+                Second.of(3),
                 state -> SignalLogger.writeString("SysIdTranslation_State", state.toString())),
             new SysIdRoutine.Mechanism(
                 output ->

@@ -15,6 +15,7 @@ import frc.robot.configuration.Manifest.ControlsBuilder;
 import frc.robot.configuration.Manifest.DrivetrainBuilder;
 import frc.robot.configuration.bindings.DriverBindings;
 import frc.robot.configuration.bindings.OperatorBindings;
+import frc.robot.configuration.constants.swerve.ChassisTuningDashboard;
 import frc.robot.modules.individuals.Dumper.Dumper;
 import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
@@ -61,6 +62,8 @@ public class RobotContainer implements IRobotContainer{
 
     if (drivetrain != null) {
       DriverBindings.create(drivetrain, driver).bind();
+
+       ChassisTuningDashboard.publish(drivetrain);
     }
 
     OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels).bind();

@@ -2,7 +2,7 @@ package frc.robot.configuration.constants.modules;
 
 public class IntakeConstants {
 
-  public static final int Angulator_MOTOR_CAN_ID = 13;
+  public static final int Angulator_MOTOR_CAN_ID = 13; 
 
   // Solo para simulacion (SingleJointedArmSim)
   public static final double kGearRatio = 20.0;
@@ -32,7 +32,7 @@ public class IntakeConstants {
   // ---------------- Soft limits (grados) ----------------
   // Activar en cuanto se confirme la direccion del motor (B debe hacer que la posicion suba).
   // Forward debe ser el mayor.
-  public static final boolean kSoftLimitsEnabled = true;
+  public static final boolean kSoftLimitsEnabled = false;
   public static final double kForwardLimitDegrees = 180;
   public static final double kReverseLimitDegrees = 0;
 
@@ -45,24 +45,25 @@ public class IntakeConstants {
 
   // ---------------- Slot 0 (UP) ----------------
   // Convertido desde el Kraken: PID en V/rot -> duty cycle/grado ( / 12 / 360 ), FF en volts
-  public static final double kP_Up = 0; // ~0.0042
+  public static final double kP_Up = 15; // ~0.0042
   public static final double kI_Up = 0;
   public static final double kD_Up = 0; // Re-tunear, unidades de REV distintas a Phoenix
 
-  public static final double kS_Up = 3.5; // V
-  public static final double kV_Up = 2; // V por grado/s
-  public static final double kA_Up = 1.0 / 360.0; // V por grado/s^2
-  public static final double kG_Up = 1; // V para sostener el intake horizontal (kG del Kraken)
+  public static final double kS_Up = 1.5; // V
+  public static final double kV_Up = 4.4; // V por grado/s
+  public static final double kA_Up = 1; // V por grado/s^2
+  public static final double kG_Up = 1; // V para sostener el intake horizontal
 
   // ---------------- Slot 1 (DOWN) ----------------
-  public static final double kP_Down = 15.0 / 12.0 / 360.0; // ~0.0035
-  public static final double kI_Down = 0; // Kraken tenia 0.05, agregar solo si hay error estable
-  public static final double kD_Down = 0;
+  // Convertido desde el Kraken: PID en V/rot -> duty cycle/grado ( / 12 / 360 ), FF en volts
+  public static final double kP_Down = 9.5; // ~0.0042
+  public static final double kI_Down = 0;
+  public static final double kD_Down = 0.35; // Re-tunear, unidades de REV distintas a Phoenix
 
-  public static final double kS_Down = 0.9;
-  public static final double kV_Down = 4.1 / 360.0;
-  public static final double kA_Down = 0;
-  public static final double kG_Down = 1; // El Kraken no tenia kG en este slot
+  public static final double kS_Down = 0.9; // V
+  public static final double kV_Down = 4.1; // V por grado/s
+  public static final double kA_Down = 0; // V por grado/s^2
+  public static final double kG_Down = 0; // V para sostener el intake horizontal 
 
   // ---------------- Gravedad ----------------
   // Lecturas del encoder en las dos posiciones de referencia. La gravedad se calcula en codigo
