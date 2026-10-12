@@ -22,8 +22,8 @@ public class VisionConstants {
   // TODO medir en el robot real.
   public static final Transform3d ROBOT_TO_LIMELIGHT =
       new Transform3d(
-          new Translation3d(0.30, 0.0, 0.50),
-          new Rotation3d(0.0, Units.degreesToRadians(-20.0), 0.0));
+          new Translation3d(0.3425, 0.07, 0.42),
+          new Rotation3d(0.0, Units.degreesToRadians(-10.0), 0.0));
 
   // Ganancias dinamicas del filtro (desviaciones estandar de la medicion de vision).
   // sigma_xy = BASE_STD_XY * distancia^2 / tags, inflada con la velocidad del chasis
