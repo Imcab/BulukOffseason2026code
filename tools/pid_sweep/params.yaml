@@ -53,10 +53,11 @@ sim:
   settle_time_s: 1.0               # tiempo extra simulado despues de que termina el path
   gravity_mps2: 9.81
 
-# Variantes del lazo de modulo. Cada una se barre completa. La primera es la que el robot usa HOY.
+# Variantes del lazo de modulo. Cada una se barre completa.
+# El robot usa velocity_limites_propuestos desde 2026-10-12 (PathPlanner en Velocity + 80/70 A).
 variants:
   - name: actual_openloop
-    drive_mode: open_loop          # pathPlannerRequest() hoy: DriveRequestType.OpenLoopVoltage (default)
+    drive_mode: open_loop          # pathPlannerRequest() antes del 2026-10-12: OpenLoopVoltage
     stator_limit_a: 120.0          # kSlipCurrent -> CTRE lo aplica como StatorCurrentLimit
     supply_limit_a: null           # hoy no hay supply limit en el drive
   - name: velocity
@@ -65,8 +66,8 @@ variants:
     supply_limit_a: null
   - name: velocity_limites_propuestos
     drive_mode: velocity
-    stator_limit_a: 80.0           # propuesta Fase 1 (no aplicada)
-    supply_limit_a: 70.0           # propuesta Fase 1 (no aplicada)
+    stator_limit_a: 80.0           # kSlipCurrent (aplicado 2026-10-12)
+    supply_limit_a: 70.0           # supply del drive (aplicado; el lower limit 40 A tras 1 s no se modela)
 
 randomization:                     # uniforme en [min, max]
   extra_mass_kg: [0.0, 0.0]        # sumado a mass_kg + extra_mass_kg

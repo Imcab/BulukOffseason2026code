@@ -29,7 +29,7 @@ core/
   sweep_torch.py         barrido en grid completo (mapa de estabilidad)
   report.py              summary.md y gráficas del grid
   trajgen.py             generador de las trayectorias sintéticas
-tests/                   52 pruebas (física, controlador, lotes, CPU=GPU, autotune, replay)
+tests/                   56 pruebas (física, controlador, lotes, CPU=GPU, autotune, replay)
 referencia/              resultados del 2026-10-12 (RTX 4060): autotune.md, sensibilidad,
                          grid/ (mapa de estabilidad) y replay.html
 ```
@@ -47,9 +47,9 @@ detecta inestabilidad. El resto de las trayectorias miden el seguimiento.
 
 | variante | qué representa |
 |---|---|
-| `actual_openloop` | el robot HOY: `ApplyRobotSpeeds` en `OpenLoopVoltage`, stator 120 A |
+| `actual_openloop` | el robot ANTES: `ApplyRobotSpeeds` en `OpenLoopVoltage`, stator 120 A |
 | `velocity` | si se cambia a `DriveRequestType.Velocity` con kV = 0.124 |
-| `velocity_limites_propuestos` | Velocity + stator 80 A / supply 70 A (propuesta, no aplicada) |
+| `velocity_limites_propuestos` | **el robot HOY** (desde 2026-10-12): Velocity + stator 80 A / supply 70 A |
 
 ## Instalación
 
@@ -73,14 +73,14 @@ usa `--quick` para las corridas grandes.
 | paso | comando | tiempo (RTX 4060) |
 |---|---|---|
 | 1. Pruebas | `python -m pytest tests -q` | ~3.5 min |
-| 2. Autotune | `python -m core.autotune --device cuda` | ~8 min por variante |
-| 3. Sensibilidad | `python -m core.sensitivity --kp 8.0,10.5 --device cuda` | ~5 min |
-| 4. Replay visual | `python -m core.replay --scenario "Autotune=8,10.5" --scenario "Gazebo=10,5" --scenario "Inestable=25,25"` | ~20 s |
+| 2. Autotune | `python -m core.autotune --device cuda --variant velocity_limites_propuestos` | ~8 min por variante |
+| 3. Sensibilidad | `python -m core.sensitivity --kp 6.5,8 --device cuda` | ~5 min |
+| 4. Replay visual | `python -m core.replay --device cuda` | ~20 s |
 | 5. Mapa en grid (opcional) | `python -m core.sweep_torch --device cuda` | ~1 min |
 
 Notas por paso:
-- **Pruebas:** tiene que decir `52 passed`. La prueba CPU = GPU se salta si no hay CUDA.
-- **Autotune:** escribe `results_autotune/autotune.md`, el historial CSV y las gráficas.
+- **Pruebas:** tiene que decir `56 passed` (o `55 passed, 1 skipped` sin GPU). La prueba CPU = GPU se salta si no hay CUDA.
+- **Autotune:** sin `--variant` corre las 3 variantes. Escribe `results_autotune/autotune.md`, el historial CSV y las gráficas.
 - **Sensibilidad:** pon en `--kp` el resultado del autotune. Escribe
   `results_autotune/sensibilidad_<variante>.md` y una PNG.
 - **Replay:** abre `results/replay.html` en el navegador. No necesita internet.
@@ -113,7 +113,7 @@ Los pesos, tamaños y escenarios están en `autotune:` dentro de `params.yaml`.
 - **`autotune.md`**:
   - La tabla *Resultado* da el kP elegido y el valor redondeado para pegar en
     `SwerveConstants.PathTranslationPID` / `PathRotationPID` (usa la variante de tu código; hoy
-    es `actual_openloop`).
+    es `velocity_limites_propuestos`).
   - *Inestables (kP/0.65)* tiene que ser 0: eso significa que se cumple el margen.
   - *Estrés* muestra qué tan rápido se degrada fuera del rango. Muchos abortos con COF bajo o
     con poca velocidad indican que los **constraints del path** (4.5 m/s, 4 m/s²) piden más de

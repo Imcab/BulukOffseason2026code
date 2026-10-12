@@ -1,111 +1,74 @@
 <title>Replay de PathPlanner</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Semi+Condensed:wght@500;700&display=swap">
 <style>
-/* Layout: visor de simulacion headless. Cabecera compacta, barra de escenarios y reproduccion,
-   y un lienzo con un entorno por robot (como la cuadricula de envs de Isaac) o todos
-   superpuestos por trayectoria. Un solo look oscuro: alfombra de campo y cinta blanca. */
 :root {
-  color-scheme: dark;
-  --bg: #0e1312;
-  --panel: #151c1a;
-  --carpet: #19221f;
-  --grid: #24302c;
-  --line: #2c3935;
-  --tape: #d8d2b8;
-  --fg: #e7ece9;
-  --muted: #93a39d;
-  --accent: #e6c34a;
-  --accent-ink: #1a1606;
-  --ok: #52b4e6;
-  --abort: #eaa53c;
-  --bad: #f0594b;
-  --font-display: "Saira Semi Condensed", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+  --bg-app: #ececee; --bg-page: #ffffff; --bg-panel: #f7f7f8; --bg-toolbar: #ececee;
+  --text: #1c1c1f; --text-muted: #68686f;
+  --border-light: #e8e8ea; --border: #d4d4d8; --border-dark: #b8b8bf;
+  --accent: #4a5fd9; --accent-bg: rgba(74,95,217,0.12);
+  --ok: #1f7a1f; --abort: #a1690a; --bad: #c21c1c;
+  --bg: #ffffff; --carpet: #ffffff; --grid: #e8e8ea; --line: #d4d4d8; --tape: #8a8a92;
+  --fg: #1c1c1f; --muted: #68686f;
+  --font-body: "Segoe UI", Arial, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "Courier New", monospace;
 }
 * { box-sizing: border-box; }
-html, body { background: var(--bg); color: var(--fg); }
-body { margin: 0; font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
-.wrap { max-width: 1440px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 16px; }
-header { display: grid; gap: 4px; }
-.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(24px, 3.2vw, 34px); letter-spacing: 0.01em; text-wrap: balance; }
-.sub { margin: 0; color: var(--muted); max-width: 72ch; }
-.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-.group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-width: 0; }
-.label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
-button, select { font: inherit; color: var(--fg); background: var(--carpet); border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; cursor: pointer; }
-button:hover, select:hover { border-color: var(--muted); }
-button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.chip { display: inline-flex; gap: 8px; align-items: baseline; }
-.chip .kp { font-family: var(--font-mono); font-size: 12px; opacity: 0.8; }
-#play { min-width: 92px; font-weight: 600; }
-.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 92px; }
-input[type="range"] { accent-color: var(--accent); width: min(360px, 60vw); }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
-.stat .v { font-family: var(--font-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.stat .k { font-size: 12px; color: var(--muted); }
-.stat.ok .v { color: var(--ok); } .stat.abort .v { color: var(--abort); } .stat.bad .v { color: var(--bad); }
-.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-.stage { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-width: 0; }
+html, body { background: var(--bg-page); color: var(--text); }
+body { margin: 0; font-family: var(--font-body); font-size: 12px; line-height: 1.4; }
+.toolbar { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 4px 8px; background: var(--bg-toolbar); border-bottom: 1px solid var(--border-dark); }
+.group { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--border-dark); }
+button, select { font: inherit; color: var(--text); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 2px; padding: 3px 9px; cursor: default; }
+button:hover, select:hover { background: var(--border-light); border-color: var(--border-dark); }
+button[aria-pressed="true"].tog { background: var(--accent-bg); border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.chip { display: inline-flex; gap: 6px; align-items: baseline; }
+.chip .kp { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+#play { min-width: 76px; }
+.time { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 84px; color: var(--text-muted); }
+input[type="range"] { accent-color: var(--accent); width: min(300px, 40vw); }
+.stage { position: relative; background: var(--bg-page); padding: 8px; min-width: 0; }
 canvas { display: block; width: 100%; }
-.tip { position: absolute; pointer-events: none; z-index: 2; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; min-width: 210px; box-shadow: 0 6px 24px rgba(0,0,0,0.45); }
-.tip h3 { margin: 0 0 4px; font-family: var(--font-display); font-size: 15px; font-weight: 700; }
-.tip dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 1px 12px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.tip dt { color: var(--muted); } .tip dd { margin: 0; text-align: right; }
+#hud { margin-bottom: 8px; }
+#exp { font-weight: 600; }
+#status { font-size: 11px; color: var(--text-muted); }
+.tip { position: absolute; pointer-events: none; z-index: 4; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 6px 8px; font-size: 12px; min-width: 200px; box-shadow: 2px 2px 6px rgba(0,0,0,0.15); }
+.tip h3 { margin: 0 0 3px; font-size: 12px; font-weight: 600; }
+.tip dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 1px 12px; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--text-muted); } .tip dd { margin: 0; text-align: right; }
 .state-ok { color: var(--ok); } .state-aborto { color: var(--abort); } .state-inestable { color: var(--bad); }
-footer { font-size: 12px; color: var(--muted); max-width: 90ch; }
-@media (max-width: 560px) { .time { min-width: 0; } #play { min-width: 0; } }
 </style>
 
-<div class="wrap">
-  <header>
-    <div class="eyebrow" id="eyebrow">STZ Robotics #3472 · PPHolonomicDriveController</div>
-    <h1>Replay de autos con robots aleatorizados</h1>
-    <p class="sub" id="sub"></p>
-  </header>
-
-  <div class="bar" role="toolbar" aria-label="Controles">
-    <div class="group" id="scenarios" aria-label="Escenario"><span class="label">kP</span></div>
-    <div class="group"><span class="label">Vista</span>
-      <button id="v-grid" aria-pressed="true">Un entorno por robot</button>
-      <button id="v-over" aria-pressed="false">Superpuestos</button>
-    </div>
+<div class="toolbar" role="toolbar" aria-label="Controles">
+  <div class="group" id="scenarios" aria-label="Escenario"></div>
+  <span class="sep"></span>
+  <div class="group">
+    <button id="v-grid" class="tog" aria-pressed="true">Un entorno por robot</button>
+    <button id="v-over" class="tog" aria-pressed="false">Superpuestos</button>
   </div>
-
-  <div class="bar" aria-label="Reproduccion">
+  <span class="sep"></span>
+  <div class="group">
     <button id="play" aria-pressed="false">Pausa</button>
-    <label class="group"><span class="label">Vel.</span>
-      <select id="speed">
-        <option value="0.25">0.25x</option><option value="0.5">0.5x</option>
-        <option value="1" selected>1x</option><option value="2">2x</option>
-      </select>
-    </label>
+    <select id="speed" aria-label="Velocidad">
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option><option value="2">2x</option>
+    </select>
     <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Tiempo">
     <span class="time" id="time">t = 0.00 s</span>
   </div>
-
-  <div class="stats" id="stats"></div>
-
-  <div class="legend">
-    <span><i class="sw" style="background:var(--ok)"></i>Siguio el path</span>
-    <span><i class="sw" style="background:var(--abort)"></i>Aborto (error &gt; 0.75 m / 45°)</span>
-    <span><i class="sw" style="background:var(--bad)"></i>Inestable (diverge u oscila)</span>
-    <span><i class="sw" style="background:var(--tape)"></i>Path y pose objetivo</span>
+  <span class="sep"></span>
+  <div class="group">
+    <button id="exp">Export video</button>
+    <span id="status"></span>
   </div>
+</div>
 
-  <div class="stage" id="stage">
+<div class="stage" id="stage">
+    <canvas id="hud" aria-label="Statistics"></canvas>
     <canvas id="cv" aria-label="Animacion de los robots"></canvas>
     <div class="tip" id="tip" hidden></div>
   </div>
 
-  <footer id="foot"></footer>
-</div>
 
 <script>
 const DATA = /*__REPLAY_DATA__*/null;
@@ -126,20 +89,14 @@ const DATA = /*__REPLAY_DATA__*/null;
 
   const $ = id => document.getElementById(id);
   const cv = $("cv"), ctx = cv.getContext("2d"), tip = $("tip"), stage = $("stage");
-  $("sub").textContent = `${N} robots con los mismos parametros aleatorizados en cada escenario (latencia, COF, velocidad real, MOI, error inicial). ` +
-    `Variante del lazo de modulo: ${D.variant}. Cambia el kP arriba y compara.`;
-  $("foot").textContent = `Simulacion en torch del modelo de tools/pid_sweep (cuerpo rigido plano, motor Kraken X60 FOC, circulo de friccion, latencia ` +
-    `${Math.round(D.ranges.latency_s[0]*1000)}–${Math.round(D.ranges.latency_s[1]*1000)} ms, COF ${D.ranges.cof[0]}–${D.ranges.cof[1]}). ` +
-    `Es una referencia para elegir kP; el ajuste final se hace en el robot real.`;
-
   // Escenarios
   const scBox = $("scenarios");
   D.scenarios.forEach((s, i) => {
     const b = document.createElement("button");
-    b.className = "chip"; b.id = "sc-" + i; b.setAttribute("aria-pressed", String(i === sc));
+    b.className = "chip tog"; b.id = "sc-" + i; b.setAttribute("aria-pressed", String(i === sc));
     b.innerHTML = `<span></span><span class="kp"></span>`;
     b.children[0].textContent = s.label; b.children[1].textContent = `(${s.kp_t}, ${s.kp_r})`;
-    b.onclick = () => { sc = i; scBox.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); stats(); draw(); };
+    b.onclick = () => { sc = i; scBox.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); draw(); };
     scBox.appendChild(b);
   });
   $("v-grid").onclick = () => setView("grid");
@@ -150,43 +107,101 @@ const DATA = /*__REPLAY_DATA__*/null;
   $("speed").onchange = e => { speed = parseFloat(e.target.value); };
   $("scrub").oninput = e => { t = e.target.value / 1000 * tEnd; draw(); };
 
-  function stats() {
-    const runs = D.scenarios[sc].runs;
-    const cnt = s => runs.filter(r => r.state === s).length;
+
+  // ---- HUD (Isaac Gym style stats, big black text) ----
+  const hudc = $("hud"), hctx = hudc.getContext("2d");
+  function statsNow() {
+    const runs = D.scenarios[sc].runs, n = k => runs.filter(r => r.state === k).length;
     const fin = runs.filter(r => r.state === "ok").map(r => r.final_cm).sort((a, b) => a - b);
-    const p95 = fin.length ? fin[Math.min(fin.length - 1, Math.floor(0.95 * fin.length))] : NaN;
-    const items = [["", N, "robots simulados"], ["ok", cnt("ok"), "siguieron el path"], ["abort", cnt("aborto"), "abortaron"],
-      ["bad", cnt("inestable"), "inestables"], ["", isNaN(p95) ? "–" : p95.toFixed(1) + " cm", "error final p95 (los que siguieron)"]];
-    $("stats").innerHTML = "";
-    for (const [cls, v, k] of items) {
-      const d = document.createElement("div"); d.className = "stat " + cls;
-      d.innerHTML = `<span class="v"></span><span class="k"></span>`;
-      d.children[0].textContent = v; d.children[1].textContent = k; $("stats").appendChild(d);
-    }
+    const p95 = fin.length ? fin[Math.min(fin.length - 1, Math.floor(0.95 * fin.length))] : null;
+    const mean = fin.length ? fin.reduce((a, b) => a + b, 0) / fin.length : null;
+    const mx = runs.reduce((a, r) => a + (r.max_cm || 0), 0) / runs.length;
+    const f = v => v === null ? "--" : v.toFixed(1) + " cm";
+    return { sc: D.scenarios[sc], ok: n("ok"), ab: n("aborto"), bad: n("inestable"), p95: f(p95), mean: f(mean), mx: mx.toFixed(1) + " cm" };
   }
+  function hudH(wl) { return wl < 900 ? 190 : 124; }
+  function drawHud(c, x, y, w, k) {   // w in device px, k = scale (device px per css px)
+    const wl = w / k, H = hudH(wl), S = statsNow(), mono = C("--font-mono");
+    c.save(); c.translate(x, y); c.scale(k, k);
+    c.fillStyle = "#fff"; c.fillRect(0, 0, wl, H);
+    c.fillStyle = "#000"; c.textBaseline = "top";
+    c.font = `700 52px ${mono}`; c.fillText(`ATTEMPTS: ${N}`, 8, 4);
+    c.font = `700 20px ${mono}`;
+    c.fillText(`SCENARIO: ${S.sc.label}   kP = (${S.sc.kp_t}, ${S.sc.kp_r})`, 8, 66);
+    c.fillText(`SIM TIME: ${t.toFixed(2)} s`, 8, 92);
+    const nar = wl < 900, X = nar ? 8 : Math.max(520, wl * 0.42), Y = nar ? 124 : 4;
+    c.font = `700 30px ${mono}`;
+    c.fillText(`SUCCESS: ${S.ok}   ABORTED: ${S.ab}   UNSTABLE: ${S.bad}`, X, Y);
+    c.font = `700 20px ${mono}`;
+    c.fillText(`FINAL ERROR p95: ${S.p95}   MEAN: ${S.mean}`, X, Y + (nar ? 36 : 44));
+    c.fillText(`MEAN MAX ERROR: ${S.mx}`, X, Y + (nar ? 60 : 70));
+    c.fillStyle = "#b8b8bf"; c.fillRect(0, H - 2, wl, 2);
+    c.restore();
+  }
+  function paintHud() {
+    const dpr = window.devicePixelRatio || 1, W = stage.clientWidth - 16, H = hudH(W);
+    if (hudc.width !== Math.round(W * dpr)) { hudc.width = Math.round(W * dpr); hudc.height = Math.round(H * dpr); hudc.style.height = H + "px"; }
+    hctx.setTransform(1, 0, 0, 1, 0, 0); drawHud(hctx, 0, 0, hudc.width, dpr);
+  }
+
+  // ---- Video export ----
+  const rc = document.createElement("canvas"); rc.width = 1920; rc.height = 1080; const rx = rc.getContext("2d");
+  let recording = false;
+  function compose() {
+    const k = 1.5, hh = hudH(rc.width / k) * k, dpr = window.devicePixelRatio || 1;
+    rx.fillStyle = "#fff"; rx.fillRect(0, 0, rc.width, rc.height);
+    drawHud(rx, 0, 0, rc.width, k);
+    const cw = cv.width / dpr, ch = cv.height / dpr, s = Math.min(rc.width / cw, (rc.height - hh - 8) / ch), w = cw * s, h = ch * s;
+    rx.drawImage(cv, (rc.width - w) / 2, hh + 8, w, h);
+  }
+  async function exportVideo() {
+    if (recording) return;
+    const st = $("status"), btn = $("exp");
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (!dl || !window.MediaRecorder) { st.textContent = "Video export is not available in this view."; return; }
+    const types = [["video/mp4;codecs=avc1", "mp4"], ["video/webm;codecs=vp9", "webm"], ["video/webm", "webm"]];
+    const pick = types.find(x => MediaRecorder.isTypeSupported(x[0]));
+    if (!pick) { st.textContent = "This browser cannot record video."; return; }
+    recording = true; btn.disabled = true;
+    const was = { playing, t }; playing = false; syncPlay();
+    const chunks = [], rec = new MediaRecorder(rc.captureStream(30), { mimeType: pick[0], videoBitsPerSecond: 8e6 });
+    rec.ondataavailable = e => { e.data.size && chunks.push(e.data); };
+    const done = new Promise(r => rec.onstop = r);
+    t = 0; draw(); compose(); rec.start();
+    const t0 = performance.now();
+    await new Promise(res => { (function step() {
+      t = (performance.now() - t0) / 1000 * speed;
+      if (t >= tEnd) { t = tEnd; draw(); compose(); return res(); }
+      draw(); compose(); st.textContent = `Recording ${Math.round(t / tEnd * 100)}%`; requestAnimationFrame(step);
+    })(); });
+    await new Promise(r => setTimeout(r, 150)); rec.stop(); await done;
+    recording = false; btn.disabled = false; t = was.t; playing = was.playing; syncPlay(); draw();
+    try {
+      await dl.save({ filename: `pathplanner_${D.scenarios[sc].label}_${view}.${pick[1]}`.replace(/\s+/g, "_"), data: new Blob(chunks, { type: pick[0].split(";")[0] }) });
+      st.textContent = "Saved.";
+    } catch (e) { st.textContent = e && e.code === "declined" ? "" : "Could not save the video."; }
+  }
+  $("exp").onclick = exportVideo;
 
   // Layout del lienzo: secciones por trayectoria.
   function resize() {
-    const W = stage.clientWidth - 20, dpr = window.devicePixelRatio || 1;
-    layout = []; let y = 0;
+    const W = stage.clientWidth - 16, dpr = window.devicePixelRatio || 1;
+    paintHud(); layout = []; let y = 0;
     const groups = D.trajectories.map((tr, j) => ({ j, ids: D.robots.map((r, i) => r.traj === j ? i : -1).filter(i => i >= 0) }));
     if (view === "grid") {
       const tile = Math.max(66, Math.min(118, Math.floor(W / Math.max(4, Math.floor(W / 92)))));
       const cols = Math.max(1, Math.floor(W / tile));
       for (const g of groups) {
-        layout.push({ kind: "label", y, text: TRAJ_NAME[D.trajectories[g.j].name] || D.trajectories[g.j].name, n: g.ids.length });
-        y += 22;
         g.ids.forEach((id, k) => layout.push({ kind: "tile", id, j: g.j, x: (k % cols) * tile, y: y + Math.floor(k / cols) * tile, w: tile - 4, h: tile - 4 }));
-        y += Math.ceil(g.ids.length / cols) * tile + 10;
+        y += Math.ceil(g.ids.length / cols) * tile + 8;
       }
     } else {
       const cols = W > 1000 ? 3 : W > 640 ? 2 : 1, pw = Math.floor(W / cols), ph = Math.round(pw * 0.62);
       groups.forEach((g, k) => {
-        const x = (k % cols) * pw, yy = y + Math.floor(k / cols) * (ph + 30);
-        layout.push({ kind: "label", y: yy, x, text: TRAJ_NAME[D.trajectories[g.j].name] || D.trajectories[g.j].name, n: g.ids.length });
-        layout.push({ kind: "panel", j: g.j, ids: g.ids, x, y: yy + 22, w: pw - 8, h: ph });
+        const x = (k % cols) * pw, yy = y + Math.floor(k / cols) * (ph + 8);
+        layout.push({ kind: "panel", j: g.j, ids: g.ids, x, y: yy, w: pw - 8, h: ph });
       });
-      y += Math.ceil(groups.length / cols) * (ph + 30);
+      y += Math.ceil(groups.length / cols) * (ph + 8);
     }
     cv.style.height = y + "px"; cv.width = Math.round(W * dpr); cv.height = Math.round(y * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -248,12 +263,7 @@ const DATA = /*__REPLAY_DATA__*/null;
     ctx.clearRect(0, 0, W, H);
     const runs = D.scenarios[sc].runs;
     for (const L of layout) {
-      if (L.kind === "label") {
-        ctx.fillStyle = COL.fg; ctx.font = `600 13px ${C("--font-body")}`; ctx.textBaseline = "top";
-        ctx.fillText(L.text, (L.x || 0) + 2, L.y + 3);
-        const w = ctx.measureText(L.text).width; ctx.fillStyle = COL.muted; ctx.font = `12px ${C("--font-mono")}`;
-        ctx.fillText(`${L.n} robots`, (L.x || 0) + w + 12, L.y + 4);
-      } else if (L.kind === "tile") {
+      if (L.kind === "tile") {
         const tr = D.trajectories[L.j], run = runs[L.id], vp = viewport(tr, L), col = COL[run.state];
         field(L, tr, vp);
         ctx.save(); ctx.beginPath(); ctx.rect(L.x, L.y, L.w, L.h); ctx.clip();
@@ -273,7 +283,7 @@ const DATA = /*__REPLAY_DATA__*/null;
         ctx.restore();
       }
     }
-    $("time").textContent = `t = ${t.toFixed(2)} s`;
+    paintHud(); $("time").textContent = `t = ${t.toFixed(2)} s`;
     $("scrub").value = Math.round(t / tEnd * 1000);
   }
 
@@ -315,6 +325,6 @@ const DATA = /*__REPLAY_DATA__*/null;
   const h = location.hash.replace("#", "");
   if (h === "superpuestos") setView("over");
   const m = /^esc(\d+)$/.exec(h); if (m && D.scenarios[+m[1]]) document.getElementById("sc-" + m[1]).click();
-  syncPlay(); stats(); resize(); requestAnimationFrame(tick);
+  syncPlay(); resize(); requestAnimationFrame(tick);
 })();
 </script>

@@ -55,4 +55,4 @@ Nominal (todo aleatorizado en el rango normal): margen x1.54, costo p95 0.289 m.
 - Constante de tiempo de steer [s]: margen entre x1.54 y x1.54
 - Rigidez lateral de llanta [1/rad]: margen entre x1.54 y x1.54
 
-![sensibilidad](sensibilidad.png)
+(grafica no incluida: la de referencia es de velocity_limites_propuestos)

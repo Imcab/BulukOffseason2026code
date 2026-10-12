@@ -25,7 +25,7 @@ from .sweep import all_trajectories, hold_env
 from .trajectory import HOLD_NAME
 
 TEMPLATE = Path(__file__).with_name("replay_template.html")
-DEFAULT_SCENARIOS = ["Codigo actual=5,5", "Gazebo=10,5", "Inestable=25,25"]
+DEFAULT_SCENARIOS = ["Autotune=6.5,8", "Antes=5,5", "Gazebo=10,5", "Inestable=25,25"]
 
 
 def _r(x, nd=3):
@@ -117,7 +117,7 @@ def main(argv=None):
     ap.add_argument("--config", default=None)
     ap.add_argument("--scenario", action="append", help='"Nombre=kP_t,kP_r" (repetible)')
     ap.add_argument("--robots", type=int, default=144)
-    ap.add_argument("--variant", default="actual_openloop")
+    ap.add_argument("--variant", default="velocity_limites_propuestos")
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--seed", type=int, default=3472)
     ap.add_argument("--out", default=str(PACKAGE_DIR / "results" / "replay.html"))

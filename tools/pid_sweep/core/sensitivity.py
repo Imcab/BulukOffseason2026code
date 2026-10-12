@@ -77,7 +77,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default=None)
     ap.add_argument("--kp", required=True, help="kP_t,kP_r a evaluar")
-    ap.add_argument("--variant", default="actual_openloop")
+    ap.add_argument("--variant", default="velocity_limites_propuestos")
     ap.add_argument("--robots", type=int, default=512)
     ap.add_argument("--device", default="cpu")
     ap.add_argument("--out", default=str(PACKAGE_DIR / "results_autotune"))
@@ -120,7 +120,7 @@ def _write(cfg, args, kp, base, rows, out: Path, elapsed: float):
     for p, ms in sorted(spans.items(), key=lambda kv: -(max(kv[1]) - min(kv[1]))):
         L.append(f"- {p}: margen entre x{min(ms):g} y x{max(ms):g}")
     try:
-        L.append("\n" + _plot(rows, need, out))
+        L.append("\n" + _plot(rows, need, out, args.variant))
     except ImportError:
         pass
     path = out / f"sensibilidad_{args.variant}.md"
@@ -128,7 +128,7 @@ def _write(cfg, args, kp, base, rows, out: Path, elapsed: float):
     print(f"[sens] {path}")
 
 
-def _plot(rows, need, out: Path) -> str:
+def _plot(rows, need, out: Path, name: str) -> str:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -157,7 +157,7 @@ def _plot(rows, need, out: Path) -> str:
     ax.set_xlabel("margen de ganancia (multiplicador de kP estable en todos los robots)")
     ax.set_title("Margen de ganancia segun cada parametro (etiqueta = valor del parametro)", fontsize=11, loc="left")
     fig.tight_layout()
-    f = out / "sensibilidad.png"
+    f = out / f"sensibilidad_{name}.png"
     fig.savefig(f, facecolor=SURFACE)
     plt.close(fig)
     return f"![sensibilidad]({f.name})"

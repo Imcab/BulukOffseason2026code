@@ -65,12 +65,22 @@ public class TunerConstants {
   private static final SteerFeedbackType kSteerFeedbackType = SteerFeedbackType.FusedCANcoder;
 
   // The stator current at which the wheels start to slip;
-  // This needs to be tuned to your individual robot
-  private static final Current kSlipCurrent = Amps.of(120);
+  // CTRE la aplica como StatorCurrentLimit del drive. Con 57 kg y COF ~1.0 la llanta satura
+  // cerca de 70 A de stator; 80 A deja la traccion casi completa sin gastar bateria patinando.
+  // (tools/pid_sweep: variante velocity_limites_propuestos)
+  private static final Current kSlipCurrent = Amps.of(80);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.
-  private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration();
+  // Supply limit del drive contra brownouts: 70 A en picos, 40 A si se sostiene mas de 1 s.
+  private static final TalonFXConfiguration driveInitialConfigs =
+      new TalonFXConfiguration()
+          .withCurrentLimits(
+              new CurrentLimitsConfigs()
+                  .withSupplyCurrentLimit(Amps.of(70))
+                  .withSupplyCurrentLowerLimit(Amps.of(40))
+                  .withSupplyCurrentLowerTime(Seconds.of(1.0))
+                  .withSupplyCurrentLimitEnable(true));
   private static final TalonFXConfiguration steerInitialConfigs =
       new TalonFXConfiguration()
           .withCurrentLimits(
