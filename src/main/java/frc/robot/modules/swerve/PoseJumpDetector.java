@@ -12,10 +12,16 @@ import java.util.function.Supplier;
 /**
  * Detecta cuando la vision corrige la pose: compara la pose fusionada con la que predice la
  * odometria (pose anterior + velocidad medida * dt). La odometria sola explica el movimiento; lo
- * que no explica es una correccion de la Limelight. Se acumula entre llamadas a {@link #reset()}
- * para que varias correcciones chicas seguidas tambien cuenten.
+ * que no explica es una correccion de la Limelight.
+ *
+ * <p>Las diferencias se suman con olvido (ventana de DECAY_S): una correccion de vision llega en unos
+ * pocos ciclos y se detecta; un desfase lento (redondeo de la prediccion, ruido, sesgos chicos) se
+ * olvida antes de acumular y no dispara replaneos de mas.
  */
 public class PoseJumpDetector {
+
+  /** Constante de tiempo del olvido: solo cuentan las correcciones de los ultimos ~0.25 s. */
+  public static final double DECAY_S = 0.25;
 
   private final Supplier<SwerveDriveState> state;
   private Pose2d lastPose;
@@ -31,7 +37,7 @@ public class PoseJumpDetector {
     accumulated = Translation2d.kZero;
   }
 
-  /** Correccion acumulada (m) desde el ultimo reset. Llamar cada ciclo. */
+  /** Correccion reciente (m): suma con olvido desde el ultimo reset. Llamar cada ciclo. */
   public double update() {
     SwerveDriveState s = state.get();
     Pose2d pose = s.Pose;
@@ -43,7 +49,8 @@ public class PoseJumpDetector {
           new Translation2d(s.Speeds.vxMetersPerSecond, s.Speeds.vyMetersPerSecond)
               .rotateBy(pose.getRotation());
       Translation2d predicted = lastPose.getTranslation().plus(v.times(dt));
-      accumulated = accumulated.plus(pose.getTranslation().minus(predicted));
+      double keep = Math.exp(-dt / DECAY_S);
+      accumulated = accumulated.times(keep).plus(pose.getTranslation().minus(predicted));
     }
     lastPose = pose;
     lastTime = now;

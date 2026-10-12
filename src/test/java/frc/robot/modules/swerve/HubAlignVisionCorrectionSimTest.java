@@ -42,6 +42,7 @@ class HubAlignVisionCorrectionSimTest {
   static void setUp() {
     assertTrue(HAL.initialize(500, 0));
     drivetrain = TunerConstants.createDrivetrain();
+    HubAlignReplay.installPathLogger();
     localization = new Localization(drivetrain, HubAlignVisionCorrectionSimTest::truePose);
     DriverStationSim.setDsAttached(true);
     DriverStationSim.setEnabled(true);
@@ -52,6 +53,7 @@ class HubAlignVisionCorrectionSimTest {
 
   @AfterAll
   static void tearDown() {
+    HubAlignReplay.write("HubAlignVisionCorrectionSimTest");
     CommandScheduler.getInstance().cancelAll();
     SimulatedLimelight.closeAll();
     drivetrain.close();
@@ -71,6 +73,9 @@ class HubAlignVisionCorrectionSimTest {
     for (int i = 0; i < seconds / LOOP_S; i++) {
       DriverStation.refreshData();
       CommandScheduler.getInstance().run();
+      if (truth != null) {
+        HubAlignReplay.sample(drivetrain.getState().Pose, truePose());
+      }
       Thread.sleep((long) (LOOP_S * 1000));
     }
   }
@@ -95,6 +100,8 @@ class HubAlignVisionCorrectionSimTest {
 
     Pose2d target = HubAlign.currentTarget().orElseThrow();
     // "Vio un tag hace 30 s": la pose es la de la odometria (mal) hasta que vuelva a ver uno.
+    HubAlignReplay.begin("Azul, la vision corrige 0.72 m en el camino", edu.wpi.first.wpilibj.DriverStation.Alliance.Blue,
+        "Centro", realStart, target);
     Command cmd = HubAlign.command(drivetrain, () -> Math.min(30.0, localization.secondsSinceLastVision()));
     CommandScheduler.getInstance().schedule(cmd);
     long t0 = System.nanoTime();
@@ -113,8 +120,11 @@ class HubAlignVisionCorrectionSimTest {
         "[test] %.2f s | robot REAL a %.1f cm del objetivo | estimador vs real %.1f cm | replaneos %.0f | estado '%s'%n",
         seconds, realErrCm, estErrCm, replans, SmartDashboard.getString("HubAlign/estado", "?"));
 
+    HubAlignReplay.end(seconds < 15 && estErrCm < 8.0 && realErrCm < 8.0, seconds, realErrCm, 0,
+        "El robot cree estar 0.72 m corrido (linea punteada) y no ve tags. En el camino la Limelight ve tags, corrige la pose y se replanea; el error es el del robot REAL.");
     assertTrue(seconds < 15, "no termino");
     assertTrue(estErrCm < 8.0, "la vision no corrigio la pose: " + estErrCm + " cm");
     assertTrue(realErrCm < 8.0, "el robot real no llego a la posicion de tiro: " + realErrCm + " cm");
+    assertTrue(replans >= 1, "la vision corrigio 0.72 m pero no se replaneo la ruta");
   }
 }

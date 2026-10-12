@@ -18,7 +18,7 @@ import frc.robot.configuration.constants.swerve.SwerveConstants;
 /**
  * Ajuste fino a una pose fija: P sobre x, y, heading (los mismos kP de PathPlanner, validados en
  * tools/pid_sweep con la prueba "mantener_pose"), con velocidades acotadas. Termina cuando lleva
- * SETTLE_TIME_S dentro de tolerancia; el timeout lo pone quien lo usa.
+ * SETTLE_TIME_S dentro de tolerancia y casi quieto; el timeout lo pone quien lo usa.
  *
  * <p>Las velocidades van en coordenadas de campo con origen azul (ForwardPerspective BlueAlliance),
  * no en la perspectiva del operador: en rojo la perspectiva del operador esta girada 180 grados y
@@ -32,9 +32,13 @@ public class DriveToPose extends Command {
       new SwerveRequest.FieldCentric()
           .withForwardPerspective(ForwardPerspectiveValue.BlueAlliance)
           .withDriveRequestType(DriveRequestType.Velocity);
-  private final SwerveRequest.Idle stop = new SwerveRequest.Idle();
   private final Timer inTolerance = new Timer();
   private boolean wasInTolerance;
+  // Dentro de tolerancia deja de corregir (y se queda quieto); vuelve a corregir solo si se sale de
+  // RESUME_FACTOR veces la tolerancia. Corregir errores de milimetros en un swerve mueve los
+  // modulos y hace que el heading oscile sin terminar nunca.
+  private static final double RESUME_FACTOR = 1.5;
+  private boolean holding;
 
   public DriveToPose(CommandSwerveDrivetrain drivetrain, Pose2d target) {
     this.drivetrain = drivetrain;
@@ -45,6 +49,7 @@ public class DriveToPose extends Command {
   @Override
   public void initialize() {
     wasInTolerance = false;
+    holding = false;
     inTolerance.stop();
     inTolerance.reset();
   }
@@ -67,9 +72,23 @@ public class DriveToPose extends Command {
     }
     double omega = MathUtil.clamp(kpR * eth, -FINE_MAX_OMEGA_RADS, FINE_MAX_OMEGA_RADS);
 
+    if (isWithinTolerance(pose, target)) {
+      holding = true;
+    } else if (!isWithin(pose, target, RESUME_FACTOR)) {
+      holding = false;
+    }
+    if (holding) {
+      vx = 0;
+      vy = 0;
+      omega = 0;
+    }
     drivetrain.setControl(request.withVelocityX(vx).withVelocityY(vy).withRotationalRate(omega));
 
-    boolean ok = isWithinTolerance(pose, target);
+    var speeds = drivetrain.getState().Speeds;
+    boolean ok =
+        isWithinTolerance(pose, target)
+            && Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond) < SETTLED_SPEED_MPS
+            && Math.abs(speeds.omegaRadiansPerSecond) < SETTLED_OMEGA_RADS;
     if (ok && !wasInTolerance) {
       inTolerance.restart();
     } else if (!ok) {
@@ -86,12 +105,17 @@ public class DriveToPose extends Command {
 
   @Override
   public void end(boolean interrupted) {
-    drivetrain.setControl(stop);
+    // Velocidad cero con lazo de velocidad: el robot se queda quieto en vez de seguir rodando.
+    drivetrain.setControl(request.withVelocityX(0).withVelocityY(0).withRotationalRate(0));
   }
 
   public static boolean isWithinTolerance(Pose2d pose, Pose2d target) {
-    return pose.getTranslation().getDistance(target.getTranslation()) <= POSITION_TOLERANCE_M
+    return isWithin(pose, target, 1.0);
+  }
+
+  private static boolean isWithin(Pose2d pose, Pose2d target, double factor) {
+    return pose.getTranslation().getDistance(target.getTranslation()) <= POSITION_TOLERANCE_M * factor
         && Math.abs(target.getRotation().minus(pose.getRotation()).getDegrees())
-            <= ANGLE_TOLERANCE_DEG;
+            <= ANGLE_TOLERANCE_DEG * factor;
   }
 }

@@ -39,6 +39,12 @@ public final class HubAlignConstants {
   // de atras del robot apunta al hub: 180 grados en azul y 0 grados de campo en rojo.
   public static final double HEADING_OFFSET_DEG = 0.0;
 
+  // El pathfinder de PathPlanner trata al robot como un punto: solo esquiva lo marcado en el
+  // navgrid. Para no depender de que el navgrid tenga margen, HubAlign le agrega los dos hubs como
+  // obstaculos inflados por la mitad del robot (bumpers) mas este margen.
+  public static final double ROBOT_HALF_SIZE_M = 0.9017 / 2.0; // bumpers de 35.5 in
+  public static final double HUB_MARGIN_M = 0.10;
+
   // Pathfinding (PathPlanner + navgrid, via PoseFinder). Algo mas suave que los autos.
   public static final PathConstraints PATHFIND_CONSTRAINTS =
       new PathConstraints(3.5, 3.0, Units.degreesToRadians(360), Units.degreesToRadians(540));
@@ -53,6 +59,9 @@ public final class HubAlignConstants {
   public static final double POSITION_TOLERANCE_M = 0.03;
   public static final double ANGLE_TOLERANCE_DEG = 2.0;
   public static final double SETTLE_TIME_S = 0.12; // tiempo seguido dentro de tolerancia
+  // Ademas de estar dentro de tolerancia, casi quieto: si no, cruza la banda girando y se pasa.
+  public static final double SETTLED_SPEED_MPS = 0.05;
+  public static final double SETTLED_OMEGA_RADS = Math.toRadians(3.0);
   public static final double FINE_TIMEOUT_S = 2.0;
 
   // Vision + odometria combinadas: el robot siempre navega con la pose fusionada. Sin tags a la

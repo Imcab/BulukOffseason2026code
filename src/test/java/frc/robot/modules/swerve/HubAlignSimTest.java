@@ -12,6 +12,7 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -44,6 +45,7 @@ class HubAlignSimTest {
   static void setUp() {
     assertTrue(HAL.initialize(500, 0));
     drivetrain = TunerConstants.createDrivetrain();
+    HubAlignReplay.installPathLogger();
     localization = new Localization(drivetrain); // la camara simulada ve el mundo desde la pose estimada
     DriverStationSim.setDsAttached(true);
     DriverStationSim.setEnabled(true);
@@ -52,6 +54,7 @@ class HubAlignSimTest {
 
   @AfterAll
   static void tearDown() {
+    HubAlignReplay.write("HubAlignSimTest");
     CommandScheduler.getInstance().cancelAll();
     SimulatedLimelight.closeAll();
     drivetrain.close();
@@ -68,6 +71,7 @@ class HubAlignSimTest {
       DriverStation.refreshData();
       CommandScheduler.getInstance().run();
       trace.add(drivetrain.getState().Pose);
+      HubAlignReplay.sample(drivetrain.getState().Pose, null);
       Thread.sleep((long) (LOOP_S * 1000));
     }
   }
@@ -109,6 +113,10 @@ class HubAlignSimTest {
             spot,
             drivetrain.getState().Pose);
     trace.clear();
+    Alliance alliance = DriverStation.getAlliance().orElseThrow();
+    HubAlignReplay.begin(
+        String.format("%s, %s desde (%.1f, %.1f)", alliance == Alliance.Red ? "Rojo" : "Azul", spot.label, start.getX(), start.getY()),
+        alliance, SmartDashboard.getString("HubAlign/posicion", spot.label), drivetrain.getState().Pose, target);
     double seconds =
         runUntilDone(HubAlign.command(drivetrain, localization::secondsSinceLastVision, () -> spot));
     loop(0.3);
@@ -120,6 +128,7 @@ class HubAlignSimTest {
         station, SmartDashboard.getString("HubAlign/posicion", spot.label), start, end, seconds, target, errCm, errDeg,
         SmartDashboard.getString("HubAlign/estado", "?"));
 
+    HubAlignReplay.end(seconds < MAX_RUN_S && errCm < 5.0 && errDeg < 3.0, seconds, errCm, errDeg, "");
     assertTrue(seconds < MAX_RUN_S, "HubAlign no termino");
     assertTrue(errCm < 5.0, "error de posicion " + errCm + " cm");
     assertTrue(errDeg < 3.0, "error de heading " + errDeg + " deg");
@@ -166,6 +175,9 @@ class HubAlignSimTest {
     // resetPose pueden llegar mediciones viejas de la Limelight simulada que mueven el estimador
     // sin que el robot se mueva.
     double[] before = moduleDistances();
+    Pose2d noVisionStart = drivetrain.getState().Pose;
+    HubAlignReplay.begin("Azul, la vision nunca vio un tag", Alliance.Blue, "Centro", noVisionStart,
+        HubAlign.currentTarget().orElseThrow());
     runUntilDone(HubAlign.command(drivetrain, () -> Double.POSITIVE_INFINITY));
     loop(0.5);
     double[] after = moduleDistances();
@@ -175,6 +187,7 @@ class HubAlignSimTest {
     }
     System.out.printf("[test] vision nunca: estado '%s', las ruedas rodaron %.3f m%n",
         SmartDashboard.getString("HubAlign/estado", "?"), rolled);
+    HubAlignReplay.end(rolled < 0.02, 0, 0, 0, "No debe moverse: la pose no es confiable. Las ruedas rodaron " + String.format("%.3f m", rolled));
     assertTrue(rolled < 0.02, "se movio sin pose confiable: " + rolled + " m");
     assertTrue(SmartDashboard.getString("HubAlign/estado", "").startsWith("la vision nunca"));
   }
@@ -188,6 +201,7 @@ class HubAlignSimTest {
     drivetrain.resetPose(start);
     loop(0.3);
     Pose2d target = HubAlign.currentTarget().orElseThrow();
+    HubAlignReplay.begin("Azul, sin tags a la vista (solo odometria)", Alliance.Blue, "Centro", start, target);
     double seconds = runUntilDone(HubAlign.command(drivetrain, () -> 30.0));
     loop(0.3);
     Pose2d end = drivetrain.getState().Pose;
@@ -195,6 +209,7 @@ class HubAlignSimTest {
     System.out.printf("[test] solo odometria: %.2f s, error %.1f cm, estado '%s', pose con '%s'%n",
         seconds, errCm, SmartDashboard.getString("HubAlign/estado", "?"),
         SmartDashboard.getString("HubAlign/pose_con", "?"));
+    HubAlignReplay.end(errCm < 5.0, seconds, errCm, 0, "La vision vio un tag hace 30 s y ya no ve nada: avanza con odometria.");
     assertTrue(errCm < 5.0, "no se alineo con odometria: " + errCm + " cm");
     assertTrue(SmartDashboard.getString("HubAlign/pose_con", "").startsWith("odometria"));
   }

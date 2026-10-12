@@ -94,6 +94,8 @@ public class DriverBindings implements Binding {
       driverDpad.up().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.MAS_CERCANA));
       driverDpad.left().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.IZQUIERDA_30));
       driverDpad.right().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.DERECHA_30));
+      // Botones en el dashboard para probar sin control (y reubicar el robot en simulacion).
+      HubAlign.publishTestButtons(drivetrain, secondsSinceVision);
     }
   }
 }

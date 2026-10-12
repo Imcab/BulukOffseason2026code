@@ -6,11 +6,16 @@ package frc.robot.modules.swerve;
 
 import static frc.robot.configuration.constants.swerve.HubAlignConstants.*;
 
+import com.pathplanner.lib.pathfinding.Pathfinding;
 import com.stzteam.features.robotlocalization.fusion.PoseFusion;
+import edu.wpi.first.math.Pair;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -64,6 +69,61 @@ public final class HubAlign {
         .withName("AlinearHub");
   }
 
+  /**
+   * Botones en el dashboard para probar sin control (HubAlign/Probar/*): uno por variante. En
+   * simulacion agrega HubAlign/Sim/* para poner el robot en poses de prueba. Los comandos que
+   * mueven el robot solo corren con el robot habilitado (en simulacion: Teleoperated en el DS).
+   */
+  public static void publishTestButtons(
+      CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision) {
+    for (HubShotSpot s : HubShotSpot.values()) {
+      SmartDashboard.putData(
+          KEY + "Probar/" + s.label,
+          command(drivetrain, secondsSinceVision, () -> s).withName("Alinear " + s.label));
+    }
+    if (RobotBase.isSimulation()) {
+      // Poses de inicio de las pruebas automaticas, en coordenadas de la alianza azul; en rojo se
+      // rotan 180 grados alrededor del centro del campo.
+      double[][] starts = {
+        {2.8, 2.0, 30}, {6.8, 4.0, 0}, {3.2, 1.2, 0}, {6.8, 1.5, 90}, {6.5, 6.5, 200}
+      };
+      for (double[] st : starts) {
+        String name = String.format("Robot a (%.1f, %.1f, %.0f)", st[0], st[1], st[2]);
+        SmartDashboard.putData(
+            KEY + "Sim/" + name,
+            Commands.runOnce(
+                    () -> {
+                      Pose2d p = new Pose2d(st[0], st[1], Rotation2d.fromDegrees(st[2]));
+                      if (DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red) {
+                        p = new Pose2d(
+                            PoseFusion.defaultFieldLayout().getFieldLength() - p.getX(),
+                            PoseFusion.defaultFieldLayout().getFieldWidth() - p.getY(),
+                            p.getRotation().plus(Rotation2d.k180deg));
+                      }
+                      drivetrain.resetPose(p);
+                    })
+                .ignoringDisable(true)
+                .withName(name));
+      }
+    }
+    publishSpots();
+  }
+
+  /** Dibuja todas las posiciones de tiro de la alianza actual en HubAlign/Campo. */
+  public static void publishSpots() {
+    DriverStation.getAlliance()
+        .ifPresent(
+            a -> {
+              java.util.List<Pose2d> spots = new java.util.ArrayList<>();
+              for (HubShotSpot s : HubShotSpot.values()) {
+                if (s.isFixed()) {
+                  spots.add(HubTargets.shootingPose(PoseFusion.defaultFieldLayout(), a, s.angleDeg));
+                }
+              }
+              field().getObject("posiciones").setPoses(spots);
+            });
+  }
+
   /** Selector "HubAlign/Posicion" en el dashboard (default: Centro). */
   public static SendableChooser<HubShotSpot> spotChooser() {
     if (spotChooser == null) {
@@ -107,6 +167,8 @@ public final class HubAlign {
       AprilTagFieldLayout layout,
       DoubleSupplier secondsSinceVision,
       HubShotSpot spot) {
+    SmartDashboard.putNumber(KEY + "replaneos", 0);
+    SmartDashboard.putString(KEY + "posicion", spot.label);
     Optional<Alliance> alliance = DriverStation.getAlliance();
     if (alliance.isEmpty()) {
       return status("sin alianza: conecta el Driver Station / FMS");
@@ -133,7 +195,6 @@ public final class HubAlign {
         String.format(
             "%s (%.3f, %.3f) %.1f deg",
             alliance.get(), target.getX(), target.getY(), target.getRotation().getDegrees()));
-    SmartDashboard.putNumber(KEY + "replaneos", 0);
 
     Command steps =
         Commands.sequence(
@@ -167,12 +228,20 @@ public final class HubAlign {
    */
   private static Command pathfindWithReplanning(CommandSwerveDrivetrain drivetrain, Pose2d target) {
     PoseJumpDetector jumps = new PoseJumpDetector(drivetrain::getState);
+    java.util.List<Pair<Translation2d, Translation2d>> hubs = inflatedHubs(PoseFusion.defaultFieldLayout());
     boolean[] arrived = {false};
     int[] replans = {0};
 
     Command onePlan =
         Commands.sequence(
-            Commands.runOnce(jumps::reset),
+            Commands.runOnce(
+                () -> {
+                  jumps.reset();
+                  // Crea el pathfinder si ningun comando de pathfinding lo ha hecho todavia (si no,
+                  // setDynamicObstacles truena con NullPointerException en el primer uso).
+                  Pathfinding.ensureInitialized();
+                  Pathfinding.setDynamicObstacles(hubs, drivetrain.getState().Pose.getTranslation());
+                }),
             drivetrain
                 .getPoseFinder()
                 .toPose(target, PATHFIND_CONSTRAINTS)
@@ -205,6 +274,24 @@ public final class HubAlign {
         onePlan.repeatedly().until(() -> arrived[0]));
   }
 
+  /** Los dos hubs (rectangulo de sus tags) inflados por media huella del robot mas el margen. */
+  static java.util.List<Pair<Translation2d, Translation2d>> inflatedHubs(AprilTagFieldLayout layout) {
+    double grow = ROBOT_HALF_SIZE_M + HUB_MARGIN_M;
+    java.util.List<Pair<Translation2d, Translation2d>> boxes = new java.util.ArrayList<>();
+    for (int[] ids : new int[][] {BLUE_HUB_TAGS, RED_HUB_TAGS}) {
+      double x0 = Double.POSITIVE_INFINITY, y0 = x0, x1 = Double.NEGATIVE_INFINITY, y1 = x1;
+      for (int id : ids) {
+        var p = layout.getTagPose(id).orElseThrow().toPose2d();
+        x0 = Math.min(x0, p.getX());
+        x1 = Math.max(x1, p.getX());
+        y0 = Math.min(y0, p.getY());
+        y1 = Math.max(y1, p.getY());
+      }
+      boxes.add(Pair.of(new Translation2d(x0 - grow, y0 - grow), new Translation2d(x1 + grow, y1 + grow)));
+    }
+    return boxes;
+  }
+
   private static Command status(String text) {
     return Commands.runOnce(() -> SmartDashboard.putString(KEY + "estado", text));
   }
@@ -213,6 +300,7 @@ public final class HubAlign {
       CommandSwerveDrivetrain drivetrain, Pose2d target, DoubleSupplier secondsSinceVision) {
     Pose2d pose = drivetrain.getState().Pose;
     field().setRobotPose(pose);
+    publishSpots();
     double age = secondsSinceVision.getAsDouble();
     SmartDashboard.putNumber(KEY + "vision_s", Double.isInfinite(age) ? -1 : age);
     SmartDashboard.putString(
