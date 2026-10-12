@@ -4,7 +4,6 @@
 
 package frc.robot.modules.swerve;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.stzteam.features.robotlocalization.vision.sim.SimulatedLimelight;
@@ -71,6 +70,15 @@ class HubAlignSimTest {
       trace.add(drivetrain.getState().Pose);
       Thread.sleep((long) (LOOP_S * 1000));
     }
+  }
+
+  private static double[] moduleDistances() {
+    var positions = drivetrain.getState().ModulePositions;
+    double[] d = new double[positions.length];
+    for (int i = 0; i < d.length; i++) {
+      d[i] = positions[i].distanceMeters;
+    }
+    return d;
   }
 
   /** Corre el comando hasta que termine (o MAX_RUN_S). Devuelve los segundos que tardo. */
@@ -142,17 +150,23 @@ class HubAlignSimTest {
   @Order(4)
   void doesNotMoveIfVisionNeverSawATag() throws InterruptedException {
     setAlliance(AllianceStationID.Blue1);
-    Pose2d start = new Pose2d(2.8, 2.0, Rotation2d.fromDegrees(30));
-    drivetrain.resetPose(start);
-    loop(0.3);
+    drivetrain.resetPose(new Pose2d(2.8, 2.0, Rotation2d.fromDegrees(30)));
+    loop(0.5);
+    // Se mide con las ruedas (cuanto rodo cada modulo), no con la pose estimada: despues de un
+    // resetPose pueden llegar mediciones viejas de la Limelight simulada que mueven el estimador
+    // sin que el robot se mueva.
+    double[] before = moduleDistances();
     runUntilDone(HubAlign.command(drivetrain, () -> Double.POSITIVE_INFINITY));
     loop(0.5);
-    Pose2d end = drivetrain.getState().Pose;
-    System.out.printf("[test] vision nunca: estado '%s', se movio %.3f m%n",
-        SmartDashboard.getString("HubAlign/estado", "?"),
-        end.getTranslation().getDistance(start.getTranslation()));
-    assertTrue(end.getTranslation().getDistance(start.getTranslation()) < 0.05, "se movio sin pose confiable");
-    assertFalse(HubAlign.isAtShootingPose(drivetrain));
+    double[] after = moduleDistances();
+    double rolled = 0;
+    for (int i = 0; i < before.length; i++) {
+      rolled = Math.max(rolled, Math.abs(after[i] - before[i]));
+    }
+    System.out.printf("[test] vision nunca: estado '%s', las ruedas rodaron %.3f m%n",
+        SmartDashboard.getString("HubAlign/estado", "?"), rolled);
+    assertTrue(rolled < 0.02, "se movio sin pose confiable: " + rolled + " m");
+    assertTrue(SmartDashboard.getString("HubAlign/estado", "").startsWith("la vision nunca"));
   }
 
   @Test
