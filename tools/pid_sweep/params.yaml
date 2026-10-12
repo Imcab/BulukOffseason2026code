@@ -55,7 +55,7 @@ sim:
   gravity_mps2: 9.81
 
 # Variantes del lazo de modulo. Cada una se barre completa.
-# El robot usa velocity_limites_propuestos desde 2026-10-12 (PathPlanner en Velocity + 80/70 A).
+# El robot usa velocity_limites_propuestos desde 2026-10-12 (PathPlanner en Velocity + 70/70 A).
 variants:
   - name: actual_openloop
     drive_mode: open_loop          # pathPlannerRequest() antes del 2026-10-12: OpenLoopVoltage
@@ -67,7 +67,7 @@ variants:
     supply_limit_a: null
   - name: velocity_limites_propuestos
     drive_mode: velocity
-    stator_limit_a: 80.0           # kSlipCurrent (aplicado 2026-10-12)
+    stator_limit_a: 70.0           # kSlipCurrent (aplicado 2026-10-12; = limite de traccion con COF 1.0)
     supply_limit_a: 70.0           # supply del drive (aplicado; el lower limit 40 A tras 1 s no se modela)
 
 randomization:                     # uniforme en [min, max]

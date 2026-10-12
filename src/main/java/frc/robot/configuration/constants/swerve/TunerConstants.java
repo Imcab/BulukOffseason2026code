@@ -64,10 +64,11 @@ public class TunerConstants {
   private static final SteerFeedbackType kSteerFeedbackType = SteerFeedbackType.FusedCANcoder;
 
   // The stator current at which the wheels start to slip;
-  // CTRE la aplica como StatorCurrentLimit del drive. Con 57 kg y COF ~1.0 la llanta satura
-  // cerca de 70 A de stator; 80 A deja la traccion casi completa sin gastar bateria patinando.
-  // (tools/pid_sweep: variante velocity_limites_propuestos)
-  private static final Current kSlipCurrent = Amps.of(80);
+  // CTRE la aplica como StatorCurrentLimit del drive. Con 57 kg y COF 1.0 la llanta satura en
+  // ~70 A de stator (mu*m*g/4 * r / G / kT = 69.4 A; PathPlanner lo reporta como "Max Optimal
+  // Current Limit"). Mas corriente solo hace patinar la llanta. Si se mide un COF mayor, subir
+  // junto con wheelCOF y driveCurrentLimit en deploy/pathplanner/settings.json.
+  private static final Current kSlipCurrent = Amps.of(70);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.

@@ -8,6 +8,10 @@ import com.stzteam.mars.models.containers.IRobotContainer;
 import com.stzteam.mars.operator.ControllerOI;
 import com.stzteam.mars.test.TestRoutine;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.configuration.Manifest;
@@ -45,6 +49,9 @@ public class RobotContainer implements IRobotContainer{
   // null si no hay drivetrain: sin odometria no hay a que fusionarle la vision
   public final Localization localization;
 
+  // Selector de autos de PathPlanner (deploy/pathplanner/autos). null si AutoBuilder no se configuro.
+  private final SendableChooser<Command> autoChooser;
+
   public RobotContainer() {
 
     this.driver = ControlsBuilder.buildDriver();
@@ -72,6 +79,15 @@ public class RobotContainer implements IRobotContainer{
        ChassisTuningDashboard.publish(drivetrain);
     }
 
+    // AutoBuilder se configura en el constructor del drivetrain (configurePathPlanner); si fallo
+    // (sin drivetrain o sin settings.json) no hay autos que construir.
+    if (AutoBuilder.isConfigured()) {
+      this.autoChooser = AutoBuilder.buildAutoChooser("testautho");
+      SmartDashboard.putData("Auto/Selector", autoChooser);
+    } else {
+      this.autoChooser = null;
+    }
+
     OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels).bind();
   }
 
@@ -79,7 +95,10 @@ public class RobotContainer implements IRobotContainer{
   public void updateNodes() {}
 
   public Command getAutonomousCommand() {
-    return Commands.print("No autonomous command configured");
+    if (autoChooser == null) {
+      return Commands.print("PathPlanner no esta configurado: no hay auto");
+    }
+    return autoChooser.getSelected();
   }
 
   @Override

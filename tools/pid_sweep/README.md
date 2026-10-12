@@ -49,7 +49,7 @@ detecta inestabilidad. El resto de las trayectorias miden el seguimiento.
 |---|---|
 | `actual_openloop` | el robot ANTES: `ApplyRobotSpeeds` en `OpenLoopVoltage`, stator 120 A |
 | `velocity` | si se cambia a `DriveRequestType.Velocity` con kV = 0.124 |
-| `velocity_limites_propuestos` | **el robot HOY** (desde 2026-10-12): Velocity + stator 80 A / supply 70 A |
+| `velocity_limites_propuestos` | **el robot HOY** (desde 2026-10-12): Velocity + stator 70 A / supply 70 A |
 
 ## Instalación
 
