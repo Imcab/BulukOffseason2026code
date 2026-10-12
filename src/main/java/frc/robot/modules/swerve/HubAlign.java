@@ -32,10 +32,15 @@ import java.util.function.DoubleSupplier;
  *
  * <p>Pensado para whileTrue: al soltar el boton se cancela y el robot regresa al control manual.
  * Telemetria en SmartDashboard "HubAlign/*" (estado, error y un Field2d con el objetivo).
+ *
+ * <p>Interruptor "HubAlign/Permitir solo odometria" (default apagado): si se enciende, sin vision
+ * reciente se alinea igual con la pose de la odometria (la ultima que fijo la Limelight + ruedas).
+ * Util en un campo de pruebas con pocos tags; en competencia dejarlo apagado.
  */
 public final class HubAlign {
 
   private static final String KEY = "HubAlign/";
+  private static final String ALLOW_ODOMETRY_KEY = KEY + "Permitir solo odometria";
   private static Field2d field;
 
   private HubAlign() {}
@@ -45,6 +50,7 @@ public final class HubAlign {
    */
   public static Command command(CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision) {
     AprilTagFieldLayout layout = PoseFusion.defaultFieldLayout();
+    SmartDashboard.setDefaultBoolean(ALLOW_ODOMETRY_KEY, false);
     return Commands.defer(() -> build(drivetrain, layout, secondsSinceVision), Set.of(drivetrain))
         .withName("AlinearHub");
   }
@@ -69,12 +75,14 @@ public final class HubAlign {
       return status("sin alianza: conecta el Driver Station / FMS");
     }
     double visionAge = secondsSinceVision.getAsDouble();
-    if (REQUIRE_RECENT_VISION && visionAge > MAX_VISION_AGE_S) {
-      return status(
-          String.format(
-              "sin vision reciente (%s): no se mueve",
-              Double.isInfinite(visionAge) ? "nunca" : String.format("%.1f s", visionAge)));
+    String age = Double.isInfinite(visionAge) ? "nunca" : String.format("hace %.1f s", visionAge);
+    SmartDashboard.putNumber(KEY + "vision_s", Double.isInfinite(visionAge) ? -1 : visionAge);
+    boolean staleVision = REQUIRE_RECENT_VISION && visionAge > MAX_VISION_AGE_S;
+    boolean allowOdometry = SmartDashboard.getBoolean(ALLOW_ODOMETRY_KEY, false);
+    if (staleVision && !allowOdometry) {
+      return status("sin vision reciente (" + age + "): no se mueve");
     }
+    String mode = staleVision ? " [SOLO ODOMETRIA, vision " + age + "]" : "";
 
     Pose2d target = HubTargets.shootingPose(layout, alliance.get());
     Pose2d start = drivetrain.getState().Pose;
@@ -98,17 +106,18 @@ public final class HubAlign {
 
     Command steps =
         Commands.sequence(
-            status(close ? "cerca: solo ajuste fino" : "pathfinding"),
+            status((close ? "cerca: solo ajuste fino" : "pathfinding") + mode),
             path,
-            status("ajuste fino"),
+            status("ajuste fino" + mode),
             new DriveToPose(drivetrain, target).withTimeout(FINE_TIMEOUT_S),
             Commands.runOnce(
                 () ->
                     SmartDashboard.putString(
                         KEY + "estado",
-                        DriveToPose.isWithinTolerance(drivetrain.getState().Pose, target)
-                            ? "alineado"
-                            : "timeout: fuera de tolerancia")));
+                        (DriveToPose.isWithinTolerance(drivetrain.getState().Pose, target)
+                                ? "alineado"
+                                : "timeout: fuera de tolerancia")
+                            + mode)));
 
     // Telemetria en paralelo (sin requirements) mientras corren los pasos.
     return Commands.deadline(steps, Commands.run(() -> publish(drivetrain, target)))
