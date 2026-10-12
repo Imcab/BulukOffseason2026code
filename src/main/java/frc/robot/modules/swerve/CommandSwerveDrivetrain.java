@@ -10,7 +10,6 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
@@ -32,6 +31,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.configuration.KeyManager;
+import frc.robot.configuration.constants.swerve.SwerveConstants;
 import frc.robot.configuration.constants.swerve.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.utils.SysIdRoutineManager;
 import java.util.Optional;
@@ -165,9 +165,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
           // -----------------------------
 
           new PPHolonomicDriveController(
-              new PIDConstants(5.0, 0.0, 0.0), // PID de Traslación
-              new PIDConstants(5.0, 0.0, 0.0) // PID de Rotación
-              ),
+              SwerveConstants.PathTranslationPID, SwerveConstants.PathRotationPID),
           config,
           () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
           this);

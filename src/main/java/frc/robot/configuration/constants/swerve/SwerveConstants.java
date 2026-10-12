@@ -16,10 +16,9 @@ public class SwerveConstants {
   public static final double crossMovementSpeed = 0.5;
 
   // PID de seguimiento de trayectoria (PPHolonomicDriveController).
-  // Valores del autotune en Gazebo (MARS, mundo offseason2026, 2026-10-01): traslacion mejora
-  // hasta kP=12 pero ahi ya hubo un aborto, asi que se deja un escalon abajo; rotacion es plana
-  // entre kP 2 y 6.5 y empeora en 8+. kD no salio por encima del ruido. Confirmar en el robot
-  // con PathFollowingTuner (SmartDashboard -> PathTuning) y pegar aqui el resultado.
-  public static final PIDConstants PathTranslationPID = new PIDConstants(10.0, 0.0, 0.0);
+  // 5.0 / 5.0 hasta tener resultados de tools/pid_sweep (los 10/5 del autotune en Gazebo,
+  // 2026-10-01, no estan validados: ahi traslacion ya tuvo un aborto en kP=12).
+  // TODO pegar aqui el kP recomendado por tools/pid_sweep y confirmarlo en el robot.
+  public static final PIDConstants PathTranslationPID = new PIDConstants(5.0, 0.0, 0.0);
   public static final PIDConstants PathRotationPID = new PIDConstants(5.0, 0.0, 0.0);
 }

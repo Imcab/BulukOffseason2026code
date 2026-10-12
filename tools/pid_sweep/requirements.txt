@@ -1,0 +1,6 @@
+# Para core/ y tests/ (sin Isaac). Dentro de Isaac Lab, torch ya viene instalado.
+torch>=2.2
+pyyaml>=6.0
+numpy>=1.24
+matplotlib>=3.7
+pytest>=7.4
