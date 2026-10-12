@@ -93,21 +93,31 @@ class HubAlignSimTest {
   }
 
   private static void alignFrom(AllianceStationID station, Pose2d start) throws InterruptedException {
+    alignFrom(station, start, HubShotSpot.CENTRO);
+  }
+
+  private static void alignFrom(AllianceStationID station, Pose2d start, HubShotSpot spot)
+      throws InterruptedException {
     setAlliance(station);
     drivetrain.resetPose(start);
     loop(1.0); // deja que la vision acepte mediciones (MegaTag2, robot habilitado)
 
-    Pose2d target = HubAlign.currentTarget().orElseThrow();
+    Pose2d target =
+        HubTargets.shootingPose(
+            com.stzteam.features.robotlocalization.fusion.PoseFusion.defaultFieldLayout(),
+            DriverStation.getAlliance().orElseThrow(),
+            spot,
+            drivetrain.getState().Pose);
     trace.clear();
     double seconds =
-        runUntilDone(HubAlign.command(drivetrain, localization::secondsSinceLastVision));
+        runUntilDone(HubAlign.command(drivetrain, localization::secondsSinceLastVision, () -> spot));
     loop(0.3);
     Pose2d end = drivetrain.getState().Pose;
     double errCm = 100 * end.getTranslation().getDistance(target.getTranslation());
     double errDeg = Math.abs(target.getRotation().minus(end.getRotation()).getDegrees());
     System.out.printf(
-        "[test] %s desde %s -> %s en %.2f s | objetivo %s | error %.1f cm, %.2f deg | estado: %s%n",
-        station, start, end, seconds, target, errCm, errDeg,
+        "[test] %s %s desde %s -> %s en %.2f s | objetivo %s | error %.1f cm, %.2f deg | estado: %s%n",
+        station, SmartDashboard.getString("HubAlign/posicion", spot.label), start, end, seconds, target, errCm, errDeg,
         SmartDashboard.getString("HubAlign/estado", "?"));
 
     assertTrue(seconds < MAX_RUN_S, "HubAlign no termino");
@@ -187,5 +197,25 @@ class HubAlignSimTest {
         SmartDashboard.getString("HubAlign/pose_con", "?"));
     assertTrue(errCm < 5.0, "no se alineo con odometria: " + errCm + " cm");
     assertTrue(SmartDashboard.getString("HubAlign/pose_con", "").startsWith("odometria"));
+  }
+
+  @Test
+  @Order(6)
+  void blueLeft45FromAroundTheHub() throws InterruptedException {
+    alignFrom(AllianceStationID.Blue1, new Pose2d(6.8, 4.0, Rotation2d.fromDegrees(0)), HubShotSpot.IZQUIERDA_45);
+  }
+
+  @Test
+  @Order(7)
+  void redRight30() throws InterruptedException {
+    alignFrom(AllianceStationID.Red1, new Pose2d(12.5, 6.5, Rotation2d.fromDegrees(200)), HubShotSpot.DERECHA_30);
+  }
+
+  @Test
+  @Order(8)
+  void blueNearestPicksRight45FromBelow() throws InterruptedException {
+    // Desde abajo a la derecha del driver azul, la mas cercana es Derecha 45.
+    alignFrom(AllianceStationID.Blue1, new Pose2d(3.2, 1.2, Rotation2d.fromDegrees(0)), HubShotSpot.MAS_CERCANA);
+    assertTrue(SmartDashboard.getString("HubAlign/posicion", "").startsWith("Derecha 45"));
   }
 }

@@ -12,12 +12,14 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 /**
  * Lleva el robot a la posicion de tiro: SHOOT_DISTANCE_M frente a la cara del hub de la propia
@@ -42,6 +44,7 @@ public final class HubAlign {
 
   private static final String KEY = "HubAlign/";
   private static Field2d field;
+  private static SendableChooser<HubShotSpot> spotChooser;
 
   private HubAlign() {}
 
@@ -50,9 +53,30 @@ public final class HubAlign {
    *     nunca).
    */
   public static Command command(CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision) {
+    return command(drivetrain, secondsSinceVision, () -> HubShotSpot.CENTRO);
+  }
+
+  /** @param spot variante de posicion; se lee al presionar el boton. */
+  public static Command command(
+      CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision, Supplier<HubShotSpot> spot) {
     AprilTagFieldLayout layout = PoseFusion.defaultFieldLayout();
-    return Commands.defer(() -> build(drivetrain, layout, secondsSinceVision), Set.of(drivetrain))
+    return Commands.defer(() -> build(drivetrain, layout, secondsSinceVision, spot.get()), Set.of(drivetrain))
         .withName("AlinearHub");
+  }
+
+  /** Selector "HubAlign/Posicion" en el dashboard (default: Centro). */
+  public static SendableChooser<HubShotSpot> spotChooser() {
+    if (spotChooser == null) {
+      spotChooser = new SendableChooser<>();
+      spotChooser.setDefaultOption(HubShotSpot.CENTRO.label, HubShotSpot.CENTRO);
+      for (HubShotSpot s : HubShotSpot.values()) {
+        if (s != HubShotSpot.CENTRO) {
+          spotChooser.addOption(s.label, s);
+        }
+      }
+      SmartDashboard.putData(KEY + "Posicion", spotChooser);
+    }
+    return spotChooser;
   }
 
   /** Pose de tiro de la alianza actual, o vacio si todavia no hay alianza. */
@@ -61,15 +85,28 @@ public final class HubAlign {
         .map(a -> HubTargets.shootingPose(PoseFusion.defaultFieldLayout(), a));
   }
 
-  /** true si el robot esta en la posicion de tiro (para condicionar el disparo). */
+  /** true si el robot esta en cualquiera de las posiciones de tiro (para condicionar el disparo). */
   public static boolean isAtShootingPose(CommandSwerveDrivetrain drivetrain) {
-    return currentTarget()
-        .map(t -> DriveToPose.isWithinTolerance(drivetrain.getState().Pose, t))
-        .orElse(false);
+    Optional<Alliance> alliance = DriverStation.getAlliance();
+    if (alliance.isEmpty()) {
+      return false;
+    }
+    Pose2d pose = drivetrain.getState().Pose;
+    for (HubShotSpot s : HubShotSpot.values()) {
+      if (s.isFixed()
+          && DriveToPose.isWithinTolerance(
+              pose, HubTargets.shootingPose(PoseFusion.defaultFieldLayout(), alliance.get(), s.angleDeg))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static Command build(
-      CommandSwerveDrivetrain drivetrain, AprilTagFieldLayout layout, DoubleSupplier secondsSinceVision) {
+      CommandSwerveDrivetrain drivetrain,
+      AprilTagFieldLayout layout,
+      DoubleSupplier secondsSinceVision,
+      HubShotSpot spot) {
     Optional<Alliance> alliance = DriverStation.getAlliance();
     if (alliance.isEmpty()) {
       return status("sin alianza: conecta el Driver Station / FMS");
@@ -79,8 +116,12 @@ public final class HubAlign {
       return status("la vision nunca ha visto un tag: la pose no es confiable, no se mueve");
     }
 
-    Pose2d target = HubTargets.shootingPose(layout, alliance.get());
     Pose2d start = drivetrain.getState().Pose;
+    HubShotSpot resolved =
+        spot.isFixed() ? spot : HubTargets.nearestSpot(layout, alliance.get(), start).orElseThrow();
+    Pose2d target = HubTargets.shootingPose(layout, alliance.get(), resolved.angleDeg);
+    SmartDashboard.putString(
+        KEY + "posicion", spot.isFixed() ? resolved.label : resolved.label + " (la mas cercana)");
     boolean close =
         start.getTranslation().getDistance(target.getTranslation()) < SKIP_PATHFIND_DISTANCE_M
             && Math.abs(target.getRotation().minus(start.getRotation()).getDegrees())
