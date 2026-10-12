@@ -10,7 +10,9 @@ import com.stzteam.mars.operator.ControllerOI;
 
 import frc.robot.configuration.constants.swerve.SwerveConstants;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.swerve.HubAlign;
 import frc.robot.modules.swerve.SwerveRequestFactory;
+import java.util.function.DoubleSupplier;
 
 public class DriverBindings implements Binding {
 
@@ -22,17 +24,27 @@ public class DriverBindings implements Binding {
 
   private final ControllerOI driver;
 
+  /* Segundos desde la ultima medicion de vision aceptada; null si no hay localizacion */
+  private final DoubleSupplier secondsSinceVision;
+
   /* Requests are created once and reused every loop instead of allocating new ones */
   private final SwerveRequest.FieldCentric driveRequest = SwerveRequestFactory.driveFieldCentric();
   private final SwerveRequest.SwerveDriveBrake brakeRequest = SwerveRequestFactory.brake();
 
-  private DriverBindings(CommandSwerveDrivetrain drivetrain, ControllerOI driver) {
+  private DriverBindings(
+      CommandSwerveDrivetrain drivetrain, ControllerOI driver, DoubleSupplier secondsSinceVision) {
     this.drivetrain = drivetrain;
     this.driver = driver;
+    this.secondsSinceVision = secondsSinceVision;
   }
 
   public static DriverBindings create(CommandSwerveDrivetrain drivetrain, ControllerOI driver) {
-    return new DriverBindings(drivetrain, driver);
+    return new DriverBindings(drivetrain, driver, null);
+  }
+
+  public static DriverBindings create(
+      CommandSwerveDrivetrain drivetrain, ControllerOI driver, DoubleSupplier secondsSinceVision) {
+    return new DriverBindings(drivetrain, driver, secondsSinceVision);
   }
 
   @Override
@@ -64,5 +76,13 @@ public class DriverBindings implements Binding {
     driverButtons.top().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
     driverButtons.bottom().whileTrue(drivetrain.applyRequest(() -> brakeRequest));
+
+    /*
+     * Mantener presionado: va a la posicion de tiro frente al hub de la alianza (pathfinding +
+     * ajuste fino con la pose de la Limelight). Al soltar se cancela y regresa el control manual.
+     */
+    if (secondsSinceVision != null) {
+      driverButtons.right().whileTrue(HubAlign.command(drivetrain, secondsSinceVision));
+    }
   }
 }

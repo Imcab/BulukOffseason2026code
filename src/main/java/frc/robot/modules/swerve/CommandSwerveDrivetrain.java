@@ -13,6 +13,8 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
+import com.stzteam.features.posefinder.ICommandSwerveDrivetrain;
+import com.stzteam.features.posefinder.PoseFinder;
 
 import com.stzteam.forgemini.io.NetworkIO;
 import edu.wpi.first.math.Matrix;
@@ -45,7 +47,7 @@ import java.util.function.Supplier;
  * https://v6.docs.ctr-electronics.com/en/stable/docs/tuner/tuner-swerve/index.html
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
-    implements Subsystem{
+    implements Subsystem, ICommandSwerveDrivetrain {
   private static final double kSimLoopPeriod = 0.004; // 4 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
@@ -65,7 +67,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
   private PathConstraints pathConstraints =
       new PathConstraints(4.5, 4.0, Units.degreesToRadians(540), Units.degreesToRadians(720));
 
-  //private final PoseFinder finder;
+  // Pathfinding a poses del campo (feature PoseFinder de MARS, sobre AutoBuilder de PathPlanner).
+  private PoseFinder finder; // se crea en initialize(), comun a los tres constructores
 
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
@@ -144,7 +147,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
 
     NetworkIO.set(KeyManager.SWERVE_KEY, "SysID", m_sysIdRoutineToApply.toString());
 
-    //this.finder = new PoseFinder(this, pathConstraints);
+    this.finder = new PoseFinder(this, pathConstraints);
   }
 
   public void setSysIdRoutine(SysIdRoutine routine) {
@@ -251,9 +254,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
     setControl(SwerveRequestFactory.simpleDriveRequest().withVelocityY(speed));
   }
 
-  // public PoseFinder getPoseFinder() {
-  //   return finder;
-  // }
+  public PoseFinder getPoseFinder() {
+    return finder;
+  }
 
   private void startSimThread() {
     m_lastSimTime = Utils.getCurrentTimeSeconds();

@@ -9,10 +9,12 @@ import com.stzteam.mars.operator.ControllerOI;
 import com.stzteam.mars.test.TestRoutine;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathfindingCommand;
 
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.configuration.Manifest;
 import frc.robot.configuration.Manifest.ControlsBuilder;
@@ -74,7 +76,7 @@ public class RobotContainer implements IRobotContainer{
     this.localization = drivetrain != null ? new Localization(drivetrain) : null;
 
     if (drivetrain != null) {
-      DriverBindings.create(drivetrain, driver).bind();
+      DriverBindings.create(drivetrain, driver, localization::secondsSinceLastVision).bind();
 
        ChassisTuningDashboard.publish(drivetrain);
     }
@@ -84,6 +86,8 @@ public class RobotContainer implements IRobotContainer{
     if (AutoBuilder.isConfigured()) {
       this.autoChooser = AutoBuilder.buildAutoChooser("testautho");
       SmartDashboard.putData("Auto/Selector", autoChooser);
+      // Calienta el pathfinder (LocalADStar) para que el primer HubAlign no tarde en planear.
+      CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
     } else {
       this.autoChooser = null;
     }

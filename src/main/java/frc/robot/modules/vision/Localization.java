@@ -20,6 +20,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.configuration.KeyManager;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
@@ -56,6 +57,9 @@ public class Localization extends SubsystemBase {
   // En el robot real el constructor no crea nada y periodic() regresa de inmediato.
   private final SimulatedLimelight simLimelight;
   private final Supplier<Pose2d> simTruthPose;
+
+  // FPGA time de la ultima medicion aceptada (cualquiera de las dos fusiones).
+  private double lastAcceptedTime = Double.NEGATIVE_INFINITY;
 
   public Localization(CommandSwerveDrivetrain drivetrain) {
     this(drivetrain, () -> drivetrain.getState().Pose);
@@ -151,6 +155,11 @@ public class Localization extends SubsystemBase {
         Units.radiansToDegrees(robotToCamera.getRotation().getZ()));
   }
 
+  /** @return segundos desde la ultima medicion de vision aceptada (infinito si nunca). */
+  public double secondsSinceLastVision() {
+    return Timer.getFPGATimestamp() - lastAcceptedTime;
+  }
+
   /** @return cuantas mediciones de vision se aceptaron en el ultimo ciclo. */
   public int getAcceptedCount() {
     return megaTag1Fusion.getAcceptedCount() + megaTag2Fusion.getAcceptedCount();
@@ -164,6 +173,9 @@ public class Localization extends SubsystemBase {
 
     megaTag1Fusion.update();
     megaTag2Fusion.update();
+    if (getAcceptedCount() > 0) {
+      lastAcceptedTime = Timer.getFPGATimestamp();
+    }
   }
 
   @Override
