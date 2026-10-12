@@ -21,6 +21,9 @@ import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
 import frc.robot.modules.individuals.intake.IntakeSpark.intakeMODE;
+import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.swerve.HubAlign;
+import java.util.function.DoubleSupplier;
 import frc.robot.requests.DumperRequest;
 import frc.robot.requests.DumperRequestFactory;
 import frc.robot.requests.FlywheelsRequest;
@@ -43,6 +46,10 @@ private final Flywheels intakFlywheels;
   private final Dumper dumper;
 private final double DEADBAND = 0.1;
 
+  // Para el alineado al hub (RT). null si no hay drivetrain.
+  private CommandSwerveDrivetrain drivetrain;
+  private DoubleSupplier secondsSinceVision;
+
 
   // Valores de prueba del shooter editables en vivo desde el dashboard
   private static final String TEST_VOLTS_KEY = "Tuning/TestVolts";
@@ -61,6 +68,14 @@ private final double DEADBAND = 0.1;
   public static OperatorBindings create(
       ControllerOI operator, Intake intake, Flywheels shooter, Indexer indexer, Dumper dumper, Flywheels intakFlywheels) {
     return new OperatorBindings(operator, intake, shooter, indexer, dumper, intakFlywheels);
+  }
+
+  /** Agrega el alineado a la posicion de tiro (RT). Sin drivetrain no se asigna nada. */
+  public OperatorBindings withHubAlign(
+      CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision) {
+    this.drivetrain = drivetrain;
+    this.secondsSinceVision = secondsSinceVision;
+    return this;
   }
 
   @Override
@@ -151,6 +166,12 @@ private final double DEADBAND = 0.1;
                                     TEST_VOLTS_KEY,
                                     shooterWheelsConstants.kTestVolts))));
   
+
+    // RT (mantener): ir a la posicion de tiro frente al hub de la alianza. Toma el chasis mientras
+    // se mantiene; al soltar regresa el manejo al driver. Igual que el boton B del driver.
+    if (drivetrain != null && secondsSinceVision != null) {
+      triggers.right().whileTrue(HubAlign.command(drivetrain, secondsSinceVision));
+    }
 
     dpad.right().whileTrue(
         intakFlywheels.setControl(

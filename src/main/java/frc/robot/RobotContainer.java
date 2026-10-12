@@ -92,7 +92,9 @@ public class RobotContainer implements IRobotContainer{
       this.autoChooser = null;
     }
 
-    OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels).bind();
+    OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels)
+        .withHubAlign(drivetrain, localization != null ? localization::secondsSinceLastVision : null)
+        .bind();
   }
 
   @Override
