@@ -21,6 +21,7 @@ import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.vision.Localization;
 import frc.tests.EmptyTest;
 
 public class RobotContainer implements IRobotContainer{
@@ -41,6 +42,9 @@ public class RobotContainer implements IRobotContainer{
 
   public final Dumper dumper;
 
+  // null si no hay drivetrain: sin odometria no hay a que fusionarle la vision
+  public final Localization localization;
+
   public RobotContainer() {
 
     this.driver = ControlsBuilder.buildDriver();
@@ -59,6 +63,8 @@ public class RobotContainer implements IRobotContainer{
     this.intakFlywheels = Manifest.buildFlywheelIntake();
 
     this.dumper = Manifest.builDumper();
+
+    this.localization = drivetrain != null ? new Localization(drivetrain) : null;
 
     if (drivetrain != null) {
       DriverBindings.create(drivetrain, driver).bind();

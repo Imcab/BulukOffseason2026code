@@ -20,9 +20,10 @@ drive_motor:                       # WPILib DCMotor.getKrakenX60Foc (wpimath 202
   free_current_a: 2.0
   free_speed_rpm: 5800.0           # -> 5800/60/5.2734*2*pi*0.0508 = 5.85 m/s (= kSpeedAt12Volts)
   # Friccion de Coulomb del modulo (rueda + engranes), expresada como volts equivalentes.
-  # TODO: se supone igual al kS estimado (0.408). Si el kS del codigo es MAYOR que la friccion
-  # real, el lazo de velocidad sobrecompensa y el robot "caza" (+-1 grado) con kP_r moderado.
-  static_friction_v: 0.408
+  # Medido 2026-10-12 con DriveCharacterizationCommand (girar en el lugar): kS = 0.1295 V.
+  # El modelo ya incluye la friccion interna del motor (R * I_libre = 0.050 V), asi que aqui va
+  # el resto: 0.1295 - 0.0497 = 0.080 V.
+  static_friction_v: 0.080
 
 steer:
   # TODO medir. X44 FOC libre 7368 rpm / 26.09 = 29.6 rad/s de modulo; se supone 70% bajo carga.
@@ -43,8 +44,8 @@ code:
   loop_period_s: 0.02              # periodo del robot (y de PathPlanner)
   desaturate_wheel_speeds: true    # ApplyRobotSpeeds.DesaturateWheelSpeeds = true por default (Phoenix 6 26.3.0)
   cosine_compensation: true        # TODO verificar: el modulo nativo de CTRE escala la velocidad por cos(error de angulo)
-  drive_kS: 0.408                  # TODO medir (estimado)
-  drive_kV: 0.124                  # V/rps del rotor; 12 / (5.85/(2*pi*0.0508) * 5.2734375)
+  drive_kS: 0.1295                 # medido 2026-10-12 (DriveChar); antes 0.408 estimado
+  drive_kV: 0.1156                 # V/rps del rotor, medido 2026-10-12 (teorico 0.124)
   drive_kP: 0.2                    # V por rps de error
 
 sim:
@@ -74,7 +75,9 @@ randomization:                     # uniforme en [min, max]
   moi_yaw_kgm2: [6.6, 7.4]
   cg_height_m: [0.19, 0.21]
   cof: [0.9, 1.6]                  # TODO COF real del Spike Grip (placeholder de PathPlanner: 1.0)
-  speed_factor: [0.85, 1.0]        # velocidad real / 5.85 m/s (TODO medir; probablemente 0.85-0.90)
+  # velocidad real / 5.85 m/s. Del kV medido sale 1.062 (6.21 m/s a 12 V, extrapolado desde
+  # <= 6 V sin carga); se deja hasta 10% menos por caida de bateria con carga.
+  speed_factor: [0.96, 1.06]
   latency_s: [0.02, 0.06]          # retraso total medicion -> actuacion (TODO medir)
   init_pos_offset_m: 0.15          # radio maximo del error inicial de pose
   init_yaw_offset_deg: 5.0

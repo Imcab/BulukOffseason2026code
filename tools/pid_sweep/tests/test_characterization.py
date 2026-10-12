@@ -80,6 +80,9 @@ def test_spin_in_place_recovers_ks_kv(cfg, sf, cof, fs):
     assert radius == pytest.approx(c["robot"]["wheel_radius_m"], rel=0.02)
 
 
-def test_theoretical_kv_matches_tuner_constant(cfg):
-    _, kv_true = truth(cfg, 1.0)
-    assert kv_true == pytest.approx(cfg["code"]["drive_kV"], rel=0.04)  # 0.124 V/rps
+def test_measured_kv_is_consistent_with_model(cfg):
+    """El kV medido que esta en params.yaml corresponde a un speed_factor dentro del rango aleatorizado."""
+    _, kv_at_1 = truth(cfg, 1.0)
+    sf_measured = kv_at_1 / cfg["code"]["drive_kV"]
+    lo, hi = cfg["randomization"]["speed_factor"]
+    assert lo - 1e-3 <= sf_measured <= hi + 1e-3
