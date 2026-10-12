@@ -140,8 +140,7 @@ class HubAlignSimTest {
 
   @Test
   @Order(4)
-  void doesNotMoveWithoutRecentVision() throws InterruptedException {
-    SmartDashboard.putBoolean("HubAlign/Permitir solo odometria", false);
+  void doesNotMoveIfVisionNeverSawATag() throws InterruptedException {
     setAlliance(AllianceStationID.Blue1);
     Pose2d start = new Pose2d(2.8, 2.0, Rotation2d.fromDegrees(30));
     drivetrain.resetPose(start);
@@ -149,34 +148,30 @@ class HubAlignSimTest {
     runUntilDone(HubAlign.command(drivetrain, () -> Double.POSITIVE_INFINITY));
     loop(0.5);
     Pose2d end = drivetrain.getState().Pose;
-    System.out.printf("[test] sin vision: estado '%s', se movio %.3f m%n",
+    System.out.printf("[test] vision nunca: estado '%s', se movio %.3f m%n",
         SmartDashboard.getString("HubAlign/estado", "?"),
         end.getTranslation().getDistance(start.getTranslation()));
-    assertTrue(end.getTranslation().getDistance(start.getTranslation()) < 0.05, "se movio sin vision");
+    assertTrue(end.getTranslation().getDistance(start.getTranslation()) < 0.05, "se movio sin pose confiable");
     assertFalse(HubAlign.isAtShootingPose(drivetrain));
   }
 
   @Test
   @Order(5)
-  void alignsWithOdometryOnlyWhenAllowed() throws InterruptedException {
-    // Campo de pruebas: la vision no ve nada (edad infinita) pero el interruptor esta encendido.
-    SmartDashboard.putBoolean("HubAlign/Permitir solo odometria", true);
-    try {
-      setAlliance(AllianceStationID.Blue1);
-      Pose2d start = new Pose2d(6.8, 1.5, Rotation2d.fromDegrees(90));
-      drivetrain.resetPose(start);
-      loop(0.3);
-      Pose2d target = HubAlign.currentTarget().orElseThrow();
-      double seconds = runUntilDone(HubAlign.command(drivetrain, () -> Double.POSITIVE_INFINITY));
-      loop(0.3);
-      Pose2d end = drivetrain.getState().Pose;
-      double errCm = 100 * end.getTranslation().getDistance(target.getTranslation());
-      String estado = SmartDashboard.getString("HubAlign/estado", "?");
-      System.out.printf("[test] solo odometria: %.2f s, error %.1f cm, estado '%s'%n", seconds, errCm, estado);
-      assertTrue(errCm < 5.0, "no se alineo con solo odometria: " + errCm + " cm");
-      assertTrue(estado.contains("SOLO ODOMETRIA"), "el estado no avisa que es solo odometria");
-    } finally {
-      SmartDashboard.putBoolean("HubAlign/Permitir solo odometria", false);
-    }
+  void keepsGoingWithOdometryWhenTagsAreNotVisible() throws InterruptedException {
+    // La vision vio un tag hace 30 s y ya no ve nada: avanza con la odometria.
+    setAlliance(AllianceStationID.Blue1);
+    Pose2d start = new Pose2d(6.8, 1.5, Rotation2d.fromDegrees(90));
+    drivetrain.resetPose(start);
+    loop(0.3);
+    Pose2d target = HubAlign.currentTarget().orElseThrow();
+    double seconds = runUntilDone(HubAlign.command(drivetrain, () -> 30.0));
+    loop(0.3);
+    Pose2d end = drivetrain.getState().Pose;
+    double errCm = 100 * end.getTranslation().getDistance(target.getTranslation());
+    System.out.printf("[test] solo odometria: %.2f s, error %.1f cm, estado '%s', pose con '%s'%n",
+        seconds, errCm, SmartDashboard.getString("HubAlign/estado", "?"),
+        SmartDashboard.getString("HubAlign/pose_con", "?"));
+    assertTrue(errCm < 5.0, "no se alineo con odometria: " + errCm + " cm");
+    assertTrue(SmartDashboard.getString("HubAlign/pose_con", "").startsWith("odometria"));
   }
 }

@@ -23,34 +23,34 @@ import java.util.function.DoubleSupplier;
  * Lleva el robot a la posicion de tiro: SHOOT_DISTANCE_M frente a la cara del hub de la propia
  * alianza (tags 25/26 azul, 9/10 rojo), con la parte de atras del robot hacia el hub.
  *
+ * <p>Vision y odometria trabajan juntas todo el tiempo: el robot navega con la pose fusionada del
+ * drivetrain. Sin tags a la vista avanza con odometria; cuando la Limelight ve un tag la pose se
+ * corrige, y si la correccion es grande (REPLAN_JUMP_M) se replanea la ruta desde la pose corregida.
+ *
  * <ol>
- *   <li>Revisa que haya alianza y vision reciente (la pose viene de la Limelight fusionada).
- *   <li>Pathfinding con PoseFinder (PathPlanner + navgrid, esquiva hub y torre). Se salta si ya
- *       esta cerca.
- *   <li>Ajuste fino con {@link DriveToPose} hasta quedar dentro de tolerancia.
+ *   <li>Revisa que haya alianza y que la vision haya visto un tag alguna vez desde que prendio.
+ *   <li>Pathfinding con PoseFinder (PathPlanner + navgrid, rodea hub y torre), replaneando si la
+ *       vision corrige la pose. Se salta si ya esta cerca.
+ *   <li>Ajuste fino con {@link DriveToPose} sobre la pose viva (si ve un tag, corrige; si no,
+ *       termina con odometria).
  * </ol>
  *
  * <p>Pensado para whileTrue: al soltar el boton se cancela y el robot regresa al control manual.
- * Telemetria en SmartDashboard "HubAlign/*" (estado, error y un Field2d con el objetivo).
- *
- * <p>Interruptor "HubAlign/Permitir solo odometria" (default apagado): si se enciende, sin vision
- * reciente se alinea igual con la pose de la odometria (la ultima que fijo la Limelight + ruedas).
- * Util en un campo de pruebas con pocos tags; en competencia dejarlo apagado.
+ * Telemetria en SmartDashboard "HubAlign/*" (estado, error, replaneos y un Field2d).
  */
 public final class HubAlign {
 
   private static final String KEY = "HubAlign/";
-  private static final String ALLOW_ODOMETRY_KEY = KEY + "Permitir solo odometria";
   private static Field2d field;
 
   private HubAlign() {}
 
   /**
-   * @param secondsSinceVision segundos desde la ultima medicion de vision aceptada.
+   * @param secondsSinceVision segundos desde la ultima medicion de vision aceptada (infinito si
+   *     nunca).
    */
   public static Command command(CommandSwerveDrivetrain drivetrain, DoubleSupplier secondsSinceVision) {
     AprilTagFieldLayout layout = PoseFusion.defaultFieldLayout();
-    SmartDashboard.setDefaultBoolean(ALLOW_ODOMETRY_KEY, false);
     return Commands.defer(() -> build(drivetrain, layout, secondsSinceVision), Set.of(drivetrain))
         .withName("AlinearHub");
   }
@@ -75,14 +75,9 @@ public final class HubAlign {
       return status("sin alianza: conecta el Driver Station / FMS");
     }
     double visionAge = secondsSinceVision.getAsDouble();
-    String age = Double.isInfinite(visionAge) ? "nunca" : String.format("hace %.1f s", visionAge);
-    SmartDashboard.putNumber(KEY + "vision_s", Double.isInfinite(visionAge) ? -1 : visionAge);
-    boolean staleVision = REQUIRE_RECENT_VISION && visionAge > MAX_VISION_AGE_S;
-    boolean allowOdometry = SmartDashboard.getBoolean(ALLOW_ODOMETRY_KEY, false);
-    if (staleVision && !allowOdometry) {
-      return status("sin vision reciente (" + age + "): no se mueve");
+    if (REQUIRE_VISION_SINCE_BOOT && Double.isInfinite(visionAge)) {
+      return status("la vision nunca ha visto un tag: la pose no es confiable, no se mueve");
     }
-    String mode = staleVision ? " [SOLO ODOMETRIA, vision " + age + "]" : "";
 
     Pose2d target = HubTargets.shootingPose(layout, alliance.get());
     Pose2d start = drivetrain.getState().Pose;
@@ -91,52 +86,96 @@ public final class HubAlign {
             && Math.abs(target.getRotation().minus(start.getRotation()).getDegrees())
                 < SKIP_PATHFIND_ANGLE_DEG;
 
-    Field2d f = field();
-    f.getObject("objetivo").setPose(target);
+    field().getObject("objetivo").setPose(target);
     SmartDashboard.putString(
         KEY + "objetivo",
         String.format(
             "%s (%.3f, %.3f) %.1f deg",
             alliance.get(), target.getX(), target.getY(), target.getRotation().getDegrees()));
-
-    Command path =
-        close
-            ? Commands.none()
-            : drivetrain.getPoseFinder().toPose(target, PATHFIND_CONSTRAINTS);
+    SmartDashboard.putNumber(KEY + "replaneos", 0);
 
     Command steps =
         Commands.sequence(
-            status((close ? "cerca: solo ajuste fino" : "pathfinding") + mode),
-            path,
-            status("ajuste fino" + mode),
+            status(close ? "cerca: solo ajuste fino" : "pathfinding"),
+            close ? Commands.none() : pathfindWithReplanning(drivetrain, target),
+            status("ajuste fino"),
             new DriveToPose(drivetrain, target).withTimeout(FINE_TIMEOUT_S),
             Commands.runOnce(
                 () ->
                     SmartDashboard.putString(
                         KEY + "estado",
-                        (DriveToPose.isWithinTolerance(drivetrain.getState().Pose, target)
-                                ? "alineado"
-                                : "timeout: fuera de tolerancia")
-                            + mode)));
+                        DriveToPose.isWithinTolerance(drivetrain.getState().Pose, target)
+                            ? "alineado"
+                            : "timeout: fuera de tolerancia")));
 
     // Telemetria en paralelo (sin requirements) mientras corren los pasos.
-    return Commands.deadline(steps, Commands.run(() -> publish(drivetrain, target)))
+    return Commands.deadline(
+            steps, Commands.run(() -> publish(drivetrain, target, secondsSinceVision)))
         .finallyDo(
             interrupted -> {
-              publish(drivetrain, target);
+              publish(drivetrain, target, secondsSinceVision);
               if (interrupted) {
                 SmartDashboard.putString(KEY + "estado", "cancelado");
               }
             });
   }
 
+  /**
+   * Pathfinding que se replanea cuando la vision corrige la pose mas de REPLAN_JUMP_M y todavia
+   * falta mas de REPLAN_MIN_DISTANCE_M (mas cerca, el ajuste fino absorbe la correccion).
+   */
+  private static Command pathfindWithReplanning(CommandSwerveDrivetrain drivetrain, Pose2d target) {
+    PoseJumpDetector jumps = new PoseJumpDetector(drivetrain::getState);
+    boolean[] arrived = {false};
+    int[] replans = {0};
+
+    Command onePlan =
+        Commands.sequence(
+            Commands.runOnce(jumps::reset),
+            drivetrain
+                .getPoseFinder()
+                .toPose(target, PATHFIND_CONSTRAINTS)
+                .finallyDo(interrupted -> arrived[0] = !interrupted)
+                .until(
+                    () -> {
+                      double corrected = jumps.update();
+                      double remaining =
+                          drivetrain.getState().Pose.getTranslation().getDistance(target.getTranslation());
+                      boolean replan =
+                          corrected > REPLAN_JUMP_M
+                              && remaining > REPLAN_MIN_DISTANCE_M
+                              && replans[0] < MAX_REPLANS;
+                      if (replan) {
+                        replans[0]++;
+                        SmartDashboard.putNumber(KEY + "replaneos", replans[0]);
+                        SmartDashboard.putString(
+                            KEY + "estado",
+                            String.format("la vision corrigio %.2f m: replaneando", corrected));
+                      }
+                      return replan;
+                    }));
+
+    return Commands.sequence(
+        Commands.runOnce(
+            () -> {
+              arrived[0] = false;
+              replans[0] = 0;
+            }),
+        onePlan.repeatedly().until(() -> arrived[0]));
+  }
+
   private static Command status(String text) {
     return Commands.runOnce(() -> SmartDashboard.putString(KEY + "estado", text));
   }
 
-  private static void publish(CommandSwerveDrivetrain drivetrain, Pose2d target) {
+  private static void publish(
+      CommandSwerveDrivetrain drivetrain, Pose2d target, DoubleSupplier secondsSinceVision) {
     Pose2d pose = drivetrain.getState().Pose;
     field().setRobotPose(pose);
+    double age = secondsSinceVision.getAsDouble();
+    SmartDashboard.putNumber(KEY + "vision_s", Double.isInfinite(age) ? -1 : age);
+    SmartDashboard.putString(
+        KEY + "pose_con", age > STALE_VISION_WARN_S ? "odometria (sin tags a la vista)" : "vision + odometria");
     SmartDashboard.putNumber(
         KEY + "error_cm", 100 * pose.getTranslation().getDistance(target.getTranslation()));
     SmartDashboard.putNumber(

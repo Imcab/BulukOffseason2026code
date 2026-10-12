@@ -55,8 +55,16 @@ public final class HubAlignConstants {
   public static final double SETTLE_TIME_S = 0.12; // tiempo seguido dentro de tolerancia
   public static final double FINE_TIMEOUT_S = 2.0;
 
-  // No se mueve si la vision no ha aceptado una medicion en este tiempo: con odometria vieja el
-  // pathfinding podria llevar el robot a un lugar equivocado (o contra la torre).
-  public static final boolean REQUIRE_RECENT_VISION = true;
-  public static final double MAX_VISION_AGE_S = 2.0;
+  // Vision + odometria combinadas: el robot siempre navega con la pose fusionada. Sin tags a la
+  // vista avanza con odometria; cuando la Limelight ve un tag corrige la pose y, si la correccion
+  // es grande, se replanea la ruta desde la pose corregida.
+  public static final double REPLAN_JUMP_M = 0.20; // correccion de vision que dispara un replaneo
+  public static final double REPLAN_MIN_DISTANCE_M = 1.0; // mas cerca, el ajuste fino la absorbe
+  public static final int MAX_REPLANS = 5; // tope por si la vision brinca de un lado a otro
+
+  // Unico freno: si la vision NUNCA ha visto un tag desde que prendio el robot, la pose no
+  // significa nada (cree estar en el origen) y no se mueve.
+  public static final boolean REQUIRE_VISION_SINCE_BOOT = true;
+  // Solo informativo: arriba de esto el estado avisa que va con odometria.
+  public static final double STALE_VISION_WARN_S = 2.0;
 }
