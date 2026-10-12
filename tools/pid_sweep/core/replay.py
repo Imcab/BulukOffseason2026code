@@ -25,7 +25,7 @@ from .sweep import all_trajectories, hold_env
 from .trajectory import HOLD_NAME
 
 TEMPLATE = Path(__file__).with_name("replay_template.html")
-DEFAULT_SCENARIOS = ["Autotune=6.5,8", "Antes=5,5", "Gazebo=10,5", "Inestable=25,25"]
+DEFAULT_SCENARIOS = ["Autotune=6,7.5", "Antes=5,5", "Gazebo=10,5", "Inestable=25,25"]
 
 
 def _r(x, nd=3):

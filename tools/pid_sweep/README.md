@@ -74,7 +74,7 @@ usa `--quick` para las corridas grandes.
 |---|---|---|
 | 1. Pruebas | `python -m pytest tests -q` | ~3.5 min |
 | 2. Autotune | `python -m core.autotune --device cuda --variant velocity_limites_propuestos` | ~8 min por variante |
-| 3. Sensibilidad | `python -m core.sensitivity --kp 6.5,8 --device cuda` | ~5 min |
+| 3. Sensibilidad | `python -m core.sensitivity --kp 6,7.5 --device cuda` | ~5 min |
 | 4. Replay visual | `python -m core.replay --device cuda` | ~20 s |
 | 5. Mapa en grid (opcional) | `python -m core.sweep_torch --device cuda` | ~1 min |
 

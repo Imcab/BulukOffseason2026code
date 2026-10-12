@@ -77,7 +77,7 @@ randomization:                     # uniforme en [min, max]
   cof: [0.9, 1.6]                  # TODO COF real del Spike Grip (placeholder de PathPlanner: 1.0)
   # velocidad real / 5.85 m/s. Del kV medido sale 1.062 (6.21 m/s a 12 V, extrapolado desde
   # <= 6 V sin carga); se deja hasta 10% menos por caida de bateria con carga.
-  speed_factor: [0.96, 1.06]
+  speed_factor: [0.96, 1.07]
   latency_s: [0.02, 0.06]          # retraso total medicion -> actuacion (TODO medir)
   init_pos_offset_m: 0.15          # radio maximo del error inicial de pose
   init_yaw_offset_deg: 5.0

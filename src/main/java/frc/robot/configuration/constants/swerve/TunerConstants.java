@@ -37,14 +37,13 @@ public class TunerConstants {
   // When using closed-loop control, the drive motor uses the control
   // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
   // Las ganancias del drive operan sobre rps del ROTOR (volts por rotacion/s del motor).
-  // kV = 12 V / (kSpeedAt12Volts / (2*pi*r) * kDriveGearRatio)
-  //    = 12 / (5.85 / (2*pi*0.0508) * 5.2734375) = 12 / 96.65 rps = 0.124 V/rps
-  // El valor anterior (9.56055) era ~ rad/s de RUEDA por volt (5.85/0.0508/12 = 9.6): el inverso
-  // en otras unidades. Con OpenLoopVoltage (lo que usan teleop y PathPlanner hoy) kV y kS no se
-  // usan; solo importan con DriveRequestType.Velocity.
-  // TODO medir kS en el robot (0.408 es estimado) y confirmar kV con SysId.
+  // kS y kV MEDIDOS el 2026-10-12 con DriveCharacterizationCommand (girando en el lugar):
+  //   kS = 0.1295 V, kV = 0.1156 V/rps.
+  // Teorico: kV = 12 / (5.85 / (2*pi*0.0508) * 5.2734375) = 0.124 V/rps; el medido es ~7% menor,
+  // o sea el robot llega a ~6.2 m/s a 12 V (sin carga). Se usan en DriveRequestType.Velocity
+  // (PathPlanner); el teleop en OpenLoopVoltage no los usa.
   private static final Slot0Configs driveGains =
-      new Slot0Configs().withKP(0.2).withKI(0).withKD(0).withKS(0.408).withKV(0.124);
+      new Slot0Configs().withKP(0.2).withKI(0).withKD(0).withKS(0.1295).withKV(0.1156);
 
   // The closed-loop output type to use for the steer motors;
   // This affects the PID/FF gains for the steer motors

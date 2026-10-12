@@ -88,6 +88,9 @@ def test_stator_limit_caps_force(cfg):
 
 
 def test_velocity_mode_beats_open_loop_when_slow(cfg):
+    # Mecanismo, independiente del kV medido en params.yaml: kV nominal y robot 15% mas lento.
+    cfg = copy.deepcopy(cfg)
+    cfg["code"]["drive_kV"] = 0.124
     env = nominal_env_params(cfg, 0, 0, cof=1.6, speed_factor=0.85)
     _, b_ol, _ = drive(cfg, variant(cfg, "actual_openloop"), env, lambda t: (3.0, 0, 0), 3.0)
     _, b_v, _ = drive(cfg, variant(cfg, "velocity"), env, lambda t: (3.0, 0, 0), 3.0)
