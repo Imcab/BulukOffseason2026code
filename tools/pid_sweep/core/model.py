@@ -1,4 +1,4 @@
-"""Modelo de swerve vectorizado en torch puro (sin Isaac).
+"""Modelo de swerve vectorizado en torch puro.
 
 Convenciones:
   - Marco de campo: x, y, yaw (rad, CCW). Marco del robot: x adelante, y izquierda.
@@ -205,7 +205,7 @@ class SwerveModel:
 
 
 class TorchBody:
-    """Cuerpo rigido plano integrado en torch (Euler semi-implicito). Misma interfaz que el de Isaac."""
+    """Cuerpo rigido plano integrado en torch (Euler semi-implicito)."""
 
     def __init__(self, env: EnvParams, dt: float, device="cpu"):
         self.env = env.to(device)

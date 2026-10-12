@@ -87,7 +87,7 @@ path_constraints:                  # constraints actuales de los paths
 sweep:
   kp_translation: {start: 1.0, stop: 25.0, num: 25}
   kp_rotation: {start: 1.0, stop: 25.0, num: 25}
-  samples_per_cell: 8              # robots aleatorizados por cada par (kP_t, kP_r)
+  samples_per_cell: 32             # robots aleatorizados por cada par (kP_t, kP_r); en CPU baja a 8
   seed: 3472
   trajectories: all                # o lista de nombres de trajectories/*.json
 
@@ -113,3 +113,41 @@ stability:
 
 recommendation:
   fraction_of_limit: 0.65          # kP recomendado = 65% del limite robusto (peor caso)
+
+autotune:
+  # Busqueda automatica de (kP_t, kP_r) con el metodo de entropia cruzada (CEM) en escala log.
+  # Cada generacion: `population` candidatos x `robots_per_candidate` robots aleatorizados nuevos
+  # x todas las trayectorias. Un candidato es VALIDO solo si es estable con sus kP y tambien con
+  # kP / margin_fraction (asi queda <= 65% del limite de inestabilidad en todo el rango).
+  # Tamanos pensados para GPU (~7 s por generacion en una RTX 4060). En CPU usa --quick.
+  population: 48
+  robots_per_candidate: 192
+  generations: 20
+  elite_fraction: 0.25
+  init_kp: [5.0, 5.0]              # punto de partida (los valores actuales del codigo)
+  init_log_std: 0.7
+  min_log_std: 0.04
+  smoothing: 0.7                   # mezcla de la distribucion nueva con la anterior
+  bounds_kp: [0.5, 40.0]
+  margin_fraction: 0.65
+  seed: 3472
+  cost:
+    # Costo por corrida (metros): pos_rms + w_final * error_final + (lo mismo en heading * deg_to_m)
+    # + abort_penalty si aborta. Se optimiza el percentil `quantile` sobre robots y trayectorias.
+    quantile: 0.95
+    w_final: 1.0
+    deg_to_m: 0.01                 # 1 grado de heading pesa como 1 cm de posicion
+    abort_penalty_m: 1.0
+  validation:
+    robots: 16384                  # robots nuevos (otra semilla) para validar el resultado
+    finalists: 8                   # mejores candidatos de la busqueda que se re-evaluan juntos
+    finalist_robots: 2048
+    compare: [[5.0, 5.0], [10.0, 5.0]]   # codigo actual y autotune de Gazebo
+  # Escenarios FUERA del rango aleatorizado: solo se reportan (que tan rapido se degrada).
+  stress:
+    latencia_80ms: {latency_s: [0.08, 0.08]}
+    cof_0.7: {cof: [0.7, 0.7]}
+    velocidad_75pct: {speed_factor: [0.75, 0.75]}
+    masa_mas_8kg: {extra_mass_kg: [8.0, 8.0]}
+    cm_alto_0.30m: {cg_height_m: [0.30, 0.30]}
+    error_inicial_30cm: {init_pos_offset_m: 0.30, init_yaw_offset_deg: 10.0}

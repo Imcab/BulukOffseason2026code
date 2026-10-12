@@ -1,6 +1,6 @@
 # Sweep de PID para PathPlanner - resumen
 
-Generado 2026-10-12 05:01 con backend `csv`. 5000 robots aleatorizados por variante, trayectorias: arco_90_giro90, corto_1m, curva_s_lateral, diagonal_giro90, giro_sitio_180, lateral_2m, mantener_pose, recta_4m, recta_6m_giro180.
+Generado 2026-10-12 06:00 con backend `torch-cuda`. 20000 robots aleatorizados por variante, trayectorias: arco_90_giro90, corto_1m, curva_s_lateral, diagonal_giro90, giro_sitio_180, lateral_2m, mantener_pose, recta_4m, recta_6m_giro180.
 
 > Estos kP son un **punto de partida**. El modelo es una simplificacion: hay que confirmarlos en el robot real, empezando por el valor recomendado y subiendo con cuidado.
 
@@ -10,51 +10,51 @@ Regla: kP = 65% del limite de inestabilidad **robusto** (el kP mas bajo que se v
 
 | variante | limite kP_t | kP_t recomendado | limite kP_r | kP_r recomendado | celda evaluada (t, r) |
 |---|---|---|---|---|---|
-| actual_openloop | 14.0 | 9.0 | 23.0 | 14.5 | (9, 14) |
-| velocity | 12.0 | 7.5 | 15.0 | 9.5 | (7, 9) |
-| velocity_limites_propuestos | 12.0 | 7.5 | 15.0 | 9.5 | (7, 9) |
+| actual_openloop | 14.0 | 9.0 | 21.0 | 13.5 | (9, 13) |
+| velocity | 11.0 | 7.0 | 15.0 | 9.5 | (7, 9) |
+| velocity_limites_propuestos | 11.0 | 7.0 | 15.0 | 9.5 | (7, 9) |
 
-- **actual_openloop**: 663 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
-- **velocity**: 1084 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
-- **velocity_limites_propuestos**: 875 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
+- **actual_openloop**: 2666 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
+- **velocity**: 4392 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
+- **velocity_limites_propuestos**: 3540 robots fueron inestables en traslacion Y rotacion a la vez (acoplamiento). Cuentan para el limite de un eje solo si la ganancia del otro eje esta por debajo de su propio limite.
 
 ## Metricas en la celda recomendada (mediana / peor caso, sobre robots y trayectorias)
 
 | variante | error lateral RMS [m] | error final pos [m] | error final heading [deg] | sobreimpulso [m] | tiempo total [s] | derrape | abortos | inestables |
 |---|---|---|---|---|---|---|---|---|
-| actual_openloop | 0.027 / 0.123 | 0.029 / 0.143 | 0.1 / 2.5 | 0.029 / 0.269 | 1.86 / 2.68 | 31% / 75% | 0/64 | 0/64 |
-| velocity | 0.024 / 0.114 | 0.033 / 0.043 | 0.0 / 4.7 | 0.036 / 0.061 | 1.86 / 2.48 | 26% / 64% | 0/64 | 0/64 |
-| velocity_limites_propuestos | 0.024 / 0.116 | 0.033 / 0.044 | 0.0 / 4.8 | 0.036 / 0.060 | 1.86 / 2.54 | 27% / 64% | 0/64 | 0/64 |
+| actual_openloop | 0.024 / 0.181 | 0.030 / 0.545 | 0.1 / 10.5 | 0.031 / 0.485 | 1.86 / 2.76 | 31% / 73% | 0/256 | 0/256 |
+| velocity | 0.025 / 0.118 | 0.036 / 0.045 | 0.0 / 4.8 | 0.042 / 0.079 | 1.86 / 2.54 | 26% / 68% | 0/256 | 0/256 |
+| velocity_limites_propuestos | 0.026 / 0.119 | 0.036 / 0.090 | 0.0 / 4.8 | 0.042 / 0.139 | 1.86 / 2.60 | 27% / 82% | 0/256 | 0/256 |
 
-### Por trayectoria - actual_openloop en (9, 14)
+### Por trayectoria - actual_openloop en (9, 13)
 
 | trayectoria | lateral RMS med/peor [m] | final pos med/peor [m] | final heading peor [deg] | abortos |
 |---|---|---|---|---|
-| arco_90_giro90 | 0.024 / 0.040 | 0.028 / 0.033 | 0.1 | 0/8 |
-| corto_1m | 0.032 / 0.052 | 0.066 / 0.084 | 0.3 | 0/8 |
-| curva_s_lateral | 0.029 / 0.043 | 0.033 / 0.044 | 0.1 | 0/8 |
-| diagonal_giro90 | 0.044 / 0.062 | 0.030 / 0.036 | 0.2 | 0/8 |
-| giro_sitio_180 | 0.000 / 0.000 | 0.001 / 0.008 | 2.0 | 0/8 |
-| lateral_2m | 0.016 / 0.032 | 0.027 / 0.032 | 0.0 | 0/8 |
-| recta_4m | 0.022 / 0.036 | 0.034 / 0.044 | 0.1 | 0/8 |
-| recta_6m_giro180 | 0.076 / 0.123 | 0.031 / 0.143 | 2.5 | 0/8 |
+| arco_90_giro90 | 0.018 / 0.039 | 0.029 / 0.037 | 0.3 | 0/32 |
+| corto_1m | 0.021 / 0.051 | 0.070 / 0.221 | 1.6 | 0/32 |
+| curva_s_lateral | 0.030 / 0.051 | 0.031 / 0.050 | 3.4 | 0/32 |
+| diagonal_giro90 | 0.049 / 0.133 | 0.029 / 0.096 | 3.9 | 0/32 |
+| giro_sitio_180 | 0.000 / 0.000 | 0.002 / 0.015 | 4.1 | 0/32 |
+| lateral_2m | 0.023 / 0.037 | 0.028 / 0.048 | 0.5 | 0/32 |
+| recta_4m | 0.015 / 0.035 | 0.034 / 0.051 | 0.2 | 0/32 |
+| recta_6m_giro180 | 0.089 / 0.181 | 0.023 / 0.545 | 10.5 | 0/32 |
 
 ## Primer caso inestable (que robot fijo el limite)
 
-- actual_openloop, traslacion: kP=(14, 11) en `mantener_pose`, latencia 59 ms, COF 0.98, velocidad 99%, MOI 6.87 (3 robots en ese kP)
-- actual_openloop, rotacion: kP=(12, 23) en `mantener_pose`, latencia 59 ms, COF 1.32, velocidad 96%, MOI 6.67 (1 robots en ese kP)
-- velocity, traslacion: kP=(12, 4) en `mantener_pose`, latencia 57 ms, COF 1.10, velocidad 100%, MOI 6.85 (15 robots en ese kP)
-- velocity, rotacion: kP=(1, 15) en `mantener_pose`, latencia 60 ms, COF 1.12, velocidad 97%, MOI 6.91 (4 robots en ese kP)
-- velocity_limites_propuestos, traslacion: kP=(12, 4) en `mantener_pose`, latencia 57 ms, COF 1.10, velocidad 100%, MOI 6.85 (15 robots en ese kP)
-- velocity_limites_propuestos, rotacion: kP=(1, 15) en `mantener_pose`, latencia 60 ms, COF 1.12, velocidad 97%, MOI 6.91 (3 robots en ese kP)
+- actual_openloop, traslacion: kP=(14, 7) en `mantener_pose`, latencia 59 ms, COF 1.11, velocidad 100%, MOI 7.00 (7 robots en ese kP)
+- actual_openloop, rotacion: kP=(12, 21) en `mantener_pose`, latencia 57 ms, COF 1.38, velocidad 97%, MOI 7.06 (2 robots en ese kP)
+- velocity, traslacion: kP=(11, 1) en `mantener_pose`, latencia 60 ms, COF 1.01, velocidad 99%, MOI 6.83 (1 robots en ese kP)
+- velocity, rotacion: kP=(1, 15) en `mantener_pose`, latencia 60 ms, COF 1.53, velocidad 99%, MOI 7.34 (19 robots en ese kP)
+- velocity_limites_propuestos, traslacion: kP=(11, 1) en `mantener_pose`, latencia 60 ms, COF 1.01, velocidad 99%, MOI 6.83 (1 robots en ese kP)
+- velocity_limites_propuestos, rotacion: kP=(1, 15) en `mantener_pose`, latencia 60 ms, COF 1.53, velocidad 99%, MOI 7.34 (14 robots en ese kP)
 
 Si el limite lo fija casi siempre la latencia alta, medir la latencia real del robot es lo que mas mueve la recomendacion.
 
 ## Informativo: celda sin inestabilidad con mejor peor caso de error RMS
 
-- actual_openloop: kP=(12, 1), peor RMS de posicion 0.123 m
-- velocity: kP=(11, 1), peor RMS de posicion 0.074 m
-- velocity_limites_propuestos: kP=(11, 2), peor RMS de posicion 0.083 m
+- actual_openloop: kP=(10, 1), peor RMS de posicion 0.153 m
+- velocity: kP=(10, 1), peor RMS de posicion 0.095 m
+- velocity_limites_propuestos: kP=(9, 2), peor RMS de posicion 0.117 m
 
 Si esta celda queda muy por debajo de la recomendada, kP mas alto no esta ayudando (la latencia o la traccion limitan antes que la ganancia).
 

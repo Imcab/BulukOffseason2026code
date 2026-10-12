@@ -3,7 +3,6 @@
 import copy
 import csv
 
-from core.model import TorchBody
 from core.sweep import run_sweep
 
 
@@ -14,8 +13,7 @@ def test_sweep_writes_outputs(cfg, tmp_path):
     c["sweep"]["samples_per_cell"] = 2
     c["sweep"]["trajectories"] = ["corto_1m"]
     c["variants"] = c["variants"][:2]
-    dt = c["sim"]["physics_dt_s"]
-    run_sweep(c, lambda env: TorchBody(env, dt), out_dir=tmp_path, log=lambda s: None)
+    run_sweep(c, out_dir=tmp_path, log=lambda s: None)
 
     with open(tmp_path / "sweep_results.csv", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))

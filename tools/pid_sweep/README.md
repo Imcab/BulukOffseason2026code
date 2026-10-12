@@ -1,190 +1,134 @@
 # pid_sweep: kP de PathPlanner por simulación
 
-Paquete autocontenido para elegir los kP de traslación y rotación del `PPHolonomicDriveController`
-del robot dumper (STZ Robotics / MARS #3472). Simula miles de robots en paralelo, cada uno con un
-par (kP_t, kP_r) distinto y parámetros físicos aleatorizados. Luego recomienda un kP que sea
-estable en **todo** el rango aleatorizado, no solo en el mejor caso.
+Herramienta para elegir los kP de traslación y rotación del `PPHolonomicDriveController` del
+robot dumper (STZ Robotics / MARS #3472). Simula miles de robots en paralelo con parámetros
+físicos aleatorizados, busca automáticamente el mejor par de kP que siga siendo estable en
+**todo** el rango (no solo en el mejor caso), lo valida con cientos de miles de corridas y genera
+una repetición visual.
+
+Todo es Python + torch. Corre en Windows, Linux o Mac, en CPU o GPU NVIDIA. No necesita Isaac
+Sim, el proyecto del robot, pathplannerlib ni wpimath.
 
 > **Los kP que salgan de aquí son un punto de partida.** El modelo es una simplificación. Hay que
 > confirmarlos en el robot real: empieza con el valor recomendado, corre los autos y sube o baja
 > con cuidado.
 
-## (a) Qué hace
+## Qué hay
 
 ```
-params.yaml            datos físicos, rangos de aleatorización, variantes y grid de kP
-trajectories/*.json    8 trayectorias SINTÉTICAS ya muestreadas (t, x, y, theta, vx, vy, omega)
-core/                  torch puro, sin Isaac:
-  model.py             módulo swerve: motor Kraken X60 FOC, límites de corriente, steer,
-                       llanta (círculo de fricción), reparto de carga por altura/offset del CM
-  controller.py        PPHolonomicDriveController (FF de la trayectoria + P en x, y, theta) y latencia
-  sim.py               corre una trayectoria en N entornos y calcula métricas
-  sweep.py, report.py  barrido, CSV, summary.md y gráficas
-  sweep_torch.py       el sweep completo SIN Isaac (CPU o GPU)
-  trajgen.py           generador de las trayectorias sintéticas
-isaac/run_sweep.py     la misma simulación, pero Isaac Lab integra el cuerpo rígido. NO PROBADO.
-tests/                 pruebas de core/ (corren en CPU, sin Isaac)
-scripts/generate_trajectories.py   regenera trajectories/ si cambian los constraints
-referencia_torch_cpu/  resultado del sweep torch en CPU (Windows), para comparar
+params.yaml              datos físicos, rangos aleatorizados, variantes, grid, autotune y estrés
+trajectories/*.json      8 trayectorias SINTÉTICAS ya muestreadas (t, x, y, theta, vx, vy, omega)
+core/
+  model.py               módulo swerve: Kraken X60 FOC, límites de corriente, fricción, steer,
+                         llanta (círculo de fricción), reparto de carga por altura/offset del CM
+  controller.py          PPHolonomicDriveController (FF + P en x, y, theta) y latencia
+  sim.py                 simulador por lotes: N robots, cada uno con su trayectoria, en un solo lote
+  autotune.py            autotuning de kP (CEM) + validación masiva + escenarios de estrés
+  sensitivity.py         margen de ganancia según cada parámetro físico (qué medir primero)
+  replay.py              repetición visual en HTML (cuadrícula de entornos tipo "headless")
+  sweep_torch.py         barrido en grid completo (mapa de estabilidad)
+  report.py              summary.md y gráficas del grid
+  trajgen.py             generador de las trayectorias sintéticas
+tests/                   52 pruebas (física, controlador, lotes, CPU=GPU, autotune, replay)
+referencia/              resultados del 2026-10-12 (RTX 4060): autotune.md, sensibilidad,
+                         grid/ (mapa de estabilidad) y replay.html
 ```
 
 Cada robot simulado:
 1. Arranca desplazado hasta 15 cm / 5° del inicio del path.
-2. Sigue la trayectoria con el controlador de PathPlanner a 50 Hz.
-3. El comando llega a los módulos con 20–60 ms de latencia.
-4. Los módulos producen fuerza según el motor, el límite de corriente y la tracción.
-5. Al terminar el path manda velocidad 0, igual que `FollowPathCommand`.
+2. Sigue la trayectoria a 50 Hz con 20–60 ms de latencia.
+3. Sus módulos producen fuerza según el motor, el límite de corriente y la tracción.
+4. Al terminar manda velocidad 0, igual que `FollowPathCommand`.
 
-Además, cada robot corre la prueba **`mantener_pose`**. Es una trayectoria quieta en la que el
-robot empieza desplazado 15 cm / 5° y solo corrige el PID. Ahí cualquier oscilación viene del lazo
-y no del path, así que es la prueba que define el límite de estabilidad.
+La prueba **`mantener_pose`** (robot desplazado 15 cm / 5°, solo corrige el PID) es la que
+detecta inestabilidad. El resto de las trayectorias miden el seguimiento.
 
-**Variantes** (se barren las tres con los mismos robots aleatorizados):
+**Variantes** (cada una se analiza por separado):
 
 | variante | qué representa |
 |---|---|
-| `actual_openloop` | el robot HOY: `ApplyRobotSpeeds` en `OpenLoopVoltage`, stator 120 A (kSlipCurrent) |
+| `actual_openloop` | el robot HOY: `ApplyRobotSpeeds` en `OpenLoopVoltage`, stator 120 A |
 | `velocity` | si se cambia a `DriveRequestType.Velocity` con kV = 0.124 |
 | `velocity_limites_propuestos` | Velocity + stator 80 A / supply 70 A (propuesta, no aplicada) |
 
-## (b) Requisitos y versión asumida
+## Instalación
 
-- Ubuntu 22.04 (cualquier Linux con Isaac Sim funciona).
-- **Isaac Lab v2.3.2** sobre **Isaac Sim 4.5 / 5.0 / 5.1**, Python 3.11. Es la última versión
-  estable al escribir esto (2026-10). Isaac Lab 3.0 todavía era "early access" y cambia la API de
-  fuerzas externas, así que **no** está soportado.
-- Para la parte sin Isaac solo se necesita: `torch`, `pyyaml`, `numpy`, `matplotlib` y `pytest`
-  (ver `requirements.txt`).
-
-Para revisar tu versión de Isaac Lab:
+Python 3.10+.
 
 ```bash
-cd ~/IsaacLab            # o donde lo tengas instalado
-git describe --tags      # debería decir v2.3.x
-./isaaclab.sh -p -c "import isaaclab, torch; print(torch.__version__, torch.cuda.is_available())"
-```
-
-## (c) Copiarlo a Ubuntu
-
-Solo hace falta esta carpeta. No necesita el proyecto del robot, ni pathplannerlib, ni wpimath.
-
-```bash
-# desde la PC con el proyecto (Windows con Git Bash, o Linux):
-scp -r tools/pid_sweep usuario@ip-ubuntu:~/pid_sweep
-# o cópiala en una USB y en Ubuntu:  cp -r /media/$USER/USB/pid_sweep ~/pid_sweep
-```
-
-## (d) Cómo correrlo
-
-Todos los comandos asumen `cd ~/pid_sweep`, salvo donde se indica otra carpeta.
-
-### Paso 1: pruebas de core (sin Isaac)
-
-Con el Python de Isaac Lab (ya trae torch):
-
-```bash
-cd ~/pid_sweep
-~/IsaacLab/isaaclab.sh -p -m pip install pyyaml matplotlib pytest   # si faltan
-~/IsaacLab/isaaclab.sh -p -m pytest tests -q
-```
-
-O en un entorno aparte:
-
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu
+cd tools/pid_sweep
+python -m venv .venv
+# Windows: .venv\Scripts\activate      Linux/Mac: source .venv/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cu128   # GPU NVIDIA
+# o, solo CPU:  pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install pyyaml numpy matplotlib pytest
-python -m pytest tests -q
+python -c "import torch; print(torch.cuda.is_available())"   # True = usará la GPU
 ```
 
-Tiene que decir `39 passed`. Si algo falla aquí, el problema no es de Isaac: pega la salida a Claude.
+## Uso
 
-### Paso 2: sweep en torch (sin Isaac), como referencia
+Todos los comandos se corren desde `tools/pid_sweep`. Con GPU agrega `--device cuda`; en CPU
+usa `--quick` para las corridas grandes.
 
-```bash
-python -m core.sweep_torch --quick --out results_torch_quick       # ~15 s, 24 robots
-python -m core.sweep_torch --out results_torch                     # 3000 robots x 9 pruebas x 3 variantes
-python -m core.sweep_torch --device cuda --out results_torch       # igual, en GPU
-```
+| paso | comando | tiempo (RTX 4060) |
+|---|---|---|
+| 1. Pruebas | `python -m pytest tests -q` | ~3.5 min |
+| 2. Autotune | `python -m core.autotune --device cuda` | ~8 min por variante |
+| 3. Sensibilidad | `python -m core.sensitivity --kp 8.0,10.5 --device cuda` | ~5 min |
+| 4. Replay visual | `python -m core.replay --scenario "Autotune=8,10.5" --scenario "Gazebo=10,5" --scenario "Inestable=25,25"` | ~20 s |
+| 5. Mapa en grid (opcional) | `python -m core.sweep_torch --device cuda` | ~1 min |
 
-En CPU (laptop de 8 núcleos) el sweep completo (5000 robots) tarda ~3.5 minutos.
-`referencia_torch_cpu/` trae el `summary.md` y las gráficas de esa corrida, hecha en Windows
-el 2026-10-12, para comparar.
+Notas por paso:
+- **Pruebas:** tiene que decir `52 passed`. La prueba CPU = GPU se salta si no hay CUDA.
+- **Autotune:** escribe `results_autotune/autotune.md`, el historial CSV y las gráficas.
+- **Sensibilidad:** pon en `--kp` el resultado del autotune. Escribe
+  `results_autotune/sensibilidad_<variante>.md` y una PNG.
+- **Replay:** abre `results/replay.html` en el navegador. No necesita internet.
+- **Mapa en grid:** escribe `results/summary.md` y el mapa de estabilidad kP_t × kP_r.
 
-Para recalcular el reporte sin volver a simular (por ejemplo, si cambias `fraction_of_limit`):
+Para recalcular el reporte del grid sin volver a simular:
+`python -m core.report results/sweep_results.csv`.
 
-```bash
-python -m core.report results_torch/sweep_results.csv
-```
+## Cómo funciona el autotune
 
-### Paso 3: sweep en Isaac Lab (NO PROBADO)
+Usa el método de entropía cruzada (CEM) sobre (log kP_t, log kP_r):
+1. Cada generación prueba 48 candidatos. Cada uno corre con los mismos 192 robots aleatorizados
+   en las 8 trayectorias más `mantener_pose`, **dos veces**: con sus kP y con kP / 0.65.
+2. Un candidato **es válido** solo si no hay ni un robot inestable en ninguna de las dos corridas.
+   Así queda, como mucho, al 65% del límite de inestabilidad en todo el rango aleatorizado
+   (la regla del 60–70%).
+3. Entre los válidos se queda con el de menor **costo p95** (percentil 95 sobre robots y
+   trayectorias). El costo por corrida es: error RMS de posición + error final + lo mismo en
+   heading (1° = 1 cm) + 1 m si aborta.
+4. Al final re-evalúa los mejores candidatos juntos y valida al ganador:
+   - con 16 384 robots nuevos (≈ 295 000 corridas),
+   - contra el código actual (5, 5) y el autotune de Gazebo (10, 5),
+   - en escenarios **fuera** del rango (estrés): latencia 80 ms, COF 0.7, 75% de velocidad,
+     +8 kg, CM a 0.30 m, error inicial 30 cm / 10°.
 
-Primero con pocos entornos:
+Los pesos, tamaños y escenarios están en `autotune:` dentro de `params.yaml`.
 
-```bash
-cd ~/IsaacLab
-./isaaclab.sh -p ~/pid_sweep/isaac/run_sweep.py --headless --quick --out ~/pid_sweep/results_isaac_quick
-```
+## Cómo leer los resultados
 
-Compara `results_isaac_quick/summary.md` con `results_torch_quick/summary.md`. Deben salir
-**casi iguales**, porque Isaac solo integra el cuerpo rígido. Si coinciden, corre el masivo:
+- **`autotune.md`**:
+  - La tabla *Resultado* da el kP elegido y el valor redondeado para pegar en
+    `SwerveConstants.PathTranslationPID` / `PathRotationPID` (usa la variante de tu código; hoy
+    es `actual_openloop`).
+  - *Inestables (kP/0.65)* tiene que ser 0: eso significa que se cumple el margen.
+  - *Estrés* muestra qué tan rápido se degrada fuera del rango. Muchos abortos con COF bajo o
+    con poca velocidad indican que los **constraints del path** (4.5 m/s, 4 m/s²) piden más de
+    lo que el robot puede dar. Subir el kP no arregla eso.
+- **`sensibilidad_<variante>.md`**: el parámetro que más mueve el margen de ganancia es el que
+  conviene medir primero en el robot.
+- **`replay.html`**:
+  - Tiene dos vistas: "Un entorno por robot" (cuadrícula, como Isaac en headless) y
+    "Superpuestos" (todas las variaciones de una trayectoria encimadas).
+  - Los colores: azul = siguió el path, ámbar = abortó, rojo = inestable.
+  - Pasa el mouse sobre un robot para ver su latencia, COF, velocidad, error final, etc.
+  - Todos los escenarios usan los mismos robots.
+- **`summary.md`** (grid): el mapa de estabilidad completo, útil para ver la forma de la frontera.
 
-```bash
-./isaaclab.sh -p ~/pid_sweep/isaac/run_sweep.py --headless --out ~/pid_sweep/results_isaac
-```
-
-Para más entornos o un grid más fino, edita `sweep:` en `params.yaml`: `kp_translation`,
-`kp_rotation` y `samples_per_cell`. Entornos = num_t × num_r × samples_per_cell.
-
-## (e) Cómo leer `results/`
-
-- **`summary.md`**: empieza aquí.
-  - *Recomendación por variante*: el límite robusto de kP_t y kP_r y el kP recomendado (65% del
-    límite, redondeado hacia abajo a 0.5).
-  - *Métricas en la celda recomendada*: mediana y peor caso de cada métrica sobre todos los robots
-    y trayectorias.
-  - *Primer caso inestable*: qué robot fijó el límite. Si casi siempre es el de latencia alta,
-    **medir la latencia real** es lo que más mueve la recomendación.
-  - *Si no aparece inestabilidad en el rango barrido*: el summary lo dice. No extrapoles: amplía el grid.
-- **`sweep_results.csv`**: una fila por robot y por trayectoria. Columnas:
-  - Parámetros: `kp_t`, `kp_r`, `mass`, `moi`, `cg_height`, `cof`, `speed_factor`, `latency_s`, `init_*`.
-  - Métricas: `lateral_rms_m`, `pos_rms_m`, `max_*`, `final_pos_err_m`, `final_yaw_err_deg`,
-    `overshoot_m`, `overshoot_deg`, `path_time_s`, `total_time_s`, `slip_frac` y `reversals_*`.
-  - Banderas (0/1): `abort`, `unstable_t`, `unstable_r`, `unstable` y `wheel_lift`.
-- **`estabilidad_<variante>.png`**: mapa kP_t × kP_r con la fracción de robots inestables. La
-  estrella es la recomendación.
-- **`error_vs_kp_traslacion.png` / `error_vs_kp_rotacion.png`**: peor caso y mediana del error
-  contra kP. Si la curva del peor caso **sube** antes del límite, la latencia o la tracción ya
-  están mandando y subir kP no ayuda.
-
-Qué significa cada bandera:
-- **aborto**: el auto habría fallado (error > 0.75 m o > 45° en algún momento). Se reporta, pero no
-  fija el límite: un kP muy bajo también "aborta" por atraso, y eso no es inestabilidad.
-- **inestable**: el lazo diverge (> 1.5 m o > 90°) u oscila en `mantener_pose` (3 o más inversiones
-  del error, con histéresis de 2 cm / 2°).
-
-Para pasar el resultado al robot, pon los kP recomendados de la variante que corresponda a tu
-código en `SwerveConstants.PathTranslationPID` y `PathRotationPID`. Hoy esa variante es
-`actual_openloop`.
-
-## (f) Problemas comunes
-
-| síntoma | qué hacer |
-|---|---|
-| `ModuleNotFoundError: yaml` / `matplotlib` | `~/IsaacLab/isaaclab.sh -p -m pip install pyyaml matplotlib` |
-| `ModuleNotFoundError: core` | corre los comandos desde `~/pid_sweep` (o usa la ruta absoluta del script de Isaac) |
-| Isaac: `AttributeError` / `TypeError` en `permanent_wrench_composer`, `set_masses`, `set_inertias`, `write_root_pose_to_sim` | tu versión de Isaac Lab no es la 2.3.x. Pega a Claude el error completo **y** la salida de `git describe --tags` |
-| Isaac: el robot no se mueve (métricas iguales para todos los kP) | posiblemente el cuerpo está "dormido" o las fuerzas no se aplican. Pega a Claude las primeras líneas del log `[isaac]` y `[sweep]` |
-| Isaac y torch dan resultados muy distintos | bug en la capa de Isaac. Pega a Claude ambos `summary.md` |
-| Se queda sin memoria de GPU | baja `samples_per_cell` o el número de puntos del grid |
-| Tarda mucho en crear la escena | normal con miles de entornos y `replicate_physics=False`. Prueba primero con `--quick` |
-
-**Si falla la API de Isaac**: no la arregles a ciegas. Copia el traceback completo, la versión
-(`git describe --tags` en la carpeta de Isaac Lab) y el comando que corriste, y pégalo de vuelta en
-la conversación con Claude. Mientras tanto, los resultados de `core.sweep_torch` son válidos:
-usan el mismo modelo.
-
-## (g) Supuestos, limitaciones y aviso
+## Supuestos y limitaciones
 
 - Cuerpo rígido plano, sin suspensión. La transferencia de carga es cuasi-estática.
 - La pose medida es la real: sin ruido y sin deriva de odometría por derrape. La latencia es un
@@ -193,15 +137,13 @@ usan el mismo modelo.
 - El steer usa un límite de velocidad y un primer orden con valores supuestos.
 - La llanta usa un modelo lineal de ángulo de deslizamiento con círculo de fricción. No hay datos
   del Spike Grip.
-- La fricción del módulo se supone igual al kS estimado (0.408 V). Si el kS real es menor, en modo
-  Velocity el robot puede "cazar" ±1° de heading con kP_r moderado.
+- La fricción del módulo se supone igual al kS estimado (0.408 V). La sensibilidad muestra qué
+  pasa si es distinta.
 - Se ignoran los feedforwards de fuerza de PathPlanner, igual que el código actual.
-- Las trayectorias son sintéticas, porque el proyecto no tiene paths de PathPlanner. Cuando existan,
-  conviene muestrearlas y agregarlas a `trajectories/` con el mismo formato JSON.
+- Las trayectorias son sintéticas, porque el proyecto no tiene paths de PathPlanner. Cuando
+  existan, muestréalas al mismo formato JSON en `trajectories/`.
 - kI = kD = 0.
 
-**Datos pendientes de medir en el robot** (cambian la recomendación; actualiza `params.yaml`):
-kS real, COF real del Spike Grip, velocidad máxima real, latencia del lazo, altura del CM y
+**Datos pendientes de medir en el robot** (actualiza `params.yaml` y vuelve a correr el autotune):
+latencia del lazo, kS/kV (SysId), velocidad máxima real, COF del Spike Grip, altura del CM y
 parámetros del steer.
-
-Los kP de este paquete son un **punto de partida**: el ajuste final se hace en el robot real.

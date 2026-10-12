@@ -9,7 +9,7 @@ from pathlib import Path
 import torch
 import yaml
 
-DTYPE = torch.float32  # igual que Isaac Lab
+DTYPE = torch.float32
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -56,6 +56,18 @@ class EnvParams:
 
     def as_columns(self) -> dict[str, torch.Tensor]:
         return {f.name: getattr(self, f.name) for f in fields(self)}
+
+    def index(self, idx) -> "EnvParams":
+        return EnvParams(**{f.name: getattr(self, f.name)[idx] for f in fields(self)})
+
+    def replace(self, **cols) -> "EnvParams":
+        c = self.as_columns()
+        c.update(cols)
+        return EnvParams(**c)
+
+    @staticmethod
+    def cat(envs: list["EnvParams"]) -> "EnvParams":
+        return EnvParams(**{f.name: torch.cat([getattr(e, f.name) for e in envs]) for f in fields(envs[0])})
 
 
 def nominal_env_params(cfg: dict, kp_t, kp_r, n: int | None = None, **overrides) -> EnvParams:

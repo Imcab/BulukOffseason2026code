@@ -1,4 +1,4 @@
-"""Sweep completo en torch puro (CPU o GPU), sin Isaac.
+"""Sweep completo en grid, torch puro (CPU o GPU).
 
 Uso (desde tools/pid_sweep):
   python -m core.sweep_torch --quick          # prueba rapida, pocos entornos
@@ -12,7 +12,6 @@ import argparse
 
 import torch
 
-from .model import TorchBody
 from .params import PACKAGE_DIR, load_config
 from .sweep import quick_config, run_sweep
 
@@ -24,6 +23,7 @@ def main(argv=None):
     ap.add_argument("--device", default="cpu", help="cpu o cuda")
     ap.add_argument("--quick", action="store_true", help="pocos entornos y 3 trayectorias")
     ap.add_argument("--threads", type=int, default=0, help="hilos de torch en CPU (0 = default)")
+    ap.add_argument("--max-batch", type=int, default=200_000, help="entornos por lote (baja si falta memoria)")
     args = ap.parse_args(argv)
 
     if args.threads:
@@ -31,9 +31,7 @@ def main(argv=None):
     cfg = load_config(args.config)
     if args.quick:
         cfg = quick_config(cfg)
-    dt = float(cfg["sim"]["physics_dt_s"])
-    run_sweep(cfg, lambda env: TorchBody(env, dt, args.device), device=args.device, out_dir=args.out,
-              backend=f"torch-{args.device}")
+    run_sweep(cfg, device=args.device, out_dir=args.out, max_batch=args.max_batch)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,58 @@
+# Sensibilidad de kP = (8, 10.5) - actual_openloop
+
+1024 robots por punto x 7 multiplicadores x 9 pruebas; 4.5 min en `cuda`. Margen = mayor multiplicador de kP estable en TODOS los robots (probados: 1, 1.25, 1.54, 1.75, 2, 2.5, 3). La regla del 65% pide >= 1.54.
+
+Nominal (todo aleatorizado en el rango normal): margen x1.54, costo p95 0.289 m.
+
+| parametro | valor | margen de ganancia | cumple 65% | costo p95 [m] | abortos |
+|---|---|---|---|---|---|
+| Latencia [s] | 0.02 | x2.5 | si | 0.211 | 0/8192 |
+| Latencia [s] | 0.04 | x1.75 | si | 0.271 | 0/8192 |
+| Latencia [s] | 0.06 | x1.54 | si | 0.379 | 0/8192 |
+| Latencia [s] | 0.08 | x1.25 | **no** | 0.807 | 100/8192 |
+| COF | 0.7 | x1 | **no** | 1.895 | 475/8192 |
+| COF | 0.9 | x1.54 | si | 0.513 | 2/8192 |
+| COF | 1.2 | x1.54 | si | 0.287 | 0/8192 |
+| COF | 1.6 | x1.54 | si | 0.245 | 0/8192 |
+| Velocidad real [x 5.85 m/s] | 0.75 | x2 | si | 1.893 | 1024/8192 |
+| Velocidad real [x 5.85 m/s] | 0.85 | x1.75 | si | 0.408 | 0/8192 |
+| Velocidad real [x 5.85 m/s] | 0.95 | x1.54 | si | 0.250 | 0/8192 |
+| Velocidad real [x 5.85 m/s] | 1 | x1.54 | si | 0.250 | 0/8192 |
+| Altura del CM [m] | 0.15 | x1.54 | si | 0.270 | 0/8192 |
+| Altura del CM [m] | 0.2 | x1.54 | si | 0.289 | 0/8192 |
+| Altura del CM [m] | 0.25 | x1.54 | si | 0.310 | 0/8192 |
+| Altura del CM [m] | 0.3 | x1.54 | si | 0.330 | 0/8192 |
+| MOI yaw [kg m2] | 6 | x1.54 | si | 0.280 | 0/8192 |
+| MOI yaw [kg m2] | 7 | x1.54 | si | 0.289 | 0/8192 |
+| MOI yaw [kg m2] | 8 | x1.54 | si | 0.309 | 1/8192 |
+| Masa extra [kg] | 0 | x1.54 | si | 0.289 | 0/8192 |
+| Masa extra [kg] | 4 | x1.54 | si | 0.299 | 0/8192 |
+| Masa extra [kg] | 8 | x1.54 | si | 0.312 | 0/8192 |
+| Friccion real del modulo [V] (kS del codigo = 0.408) | 0.1 | x1.25 | **no** | 0.295 | 0/8192 |
+| Friccion real del modulo [V] (kS del codigo = 0.408) | 0.25 | x1.25 | **no** | 0.290 | 0/8192 |
+| Friccion real del modulo [V] (kS del codigo = 0.408) | 0.408 | x1.54 | si | 0.289 | 0/8192 |
+| Friccion real del modulo [V] (kS del codigo = 0.408) | 0.6 | x1.75 | si | 0.296 | 0/8192 |
+| Velocidad max. de steer [rad/s] | 10 | x1.25 | **no** | 0.320 | 23/8192 |
+| Velocidad max. de steer [rad/s] | 20 | x1.54 | si | 0.289 | 0/8192 |
+| Velocidad max. de steer [rad/s] | 30 | x1.54 | si | 0.287 | 0/8192 |
+| Constante de tiempo de steer [s] | 0.005 | x1.54 | si | 0.277 | 0/8192 |
+| Constante de tiempo de steer [s] | 0.015 | x1.54 | si | 0.289 | 0/8192 |
+| Constante de tiempo de steer [s] | 0.03 | x1.54 | si | 0.329 | 0/8192 |
+| Rigidez lateral de llanta [1/rad] | 8 | x1.54 | si | 0.291 | 0/8192 |
+| Rigidez lateral de llanta [1/rad] | 15 | x1.54 | si | 0.289 | 0/8192 |
+| Rigidez lateral de llanta [1/rad] | 30 | x1.54 | si | 0.301 | 0/8192 |
+
+## Que medir primero (lo que mas mueve el margen)
+
+- Latencia [s]: margen entre x1.25 y x2.5
+- COF: margen entre x1 y x1.54
+- Friccion real del modulo [V] (kS del codigo = 0.408): margen entre x1.25 y x1.75
+- Velocidad real [x 5.85 m/s]: margen entre x1.54 y x2
+- Velocidad max. de steer [rad/s]: margen entre x1.25 y x1.54
+- Altura del CM [m]: margen entre x1.54 y x1.54
+- MOI yaw [kg m2]: margen entre x1.54 y x1.54
+- Masa extra [kg]: margen entre x1.54 y x1.54
+- Constante de tiempo de steer [s]: margen entre x1.54 y x1.54
+- Rigidez lateral de llanta [1/rad]: margen entre x1.54 y x1.54
+
+![sensibilidad](sensibilidad.png)
