@@ -1,0 +1,59 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 7.763288888888889,
+        "y": 7.231177777777777
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 7.665844444444444,
+        "y": 4.950977777777777
+      },
+      "isLocked": false,
+      "linkedName": "regreso"
+    },
+    {
+      "anchor": {
+        "x": 2.2674222222222222,
+        "y": 5.545388888888888
+      },
+      "prevControl": {
+        "x": 2.5169353668429446,
+        "y": 5.5297943173500945
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "Pos Lanzar PA1"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.5,
+      "rotationDegrees": 148.62477496102966
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 2.0,
+    "maxAcceleration": 2.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": 148.76809045148298
+  },
+  "reversed": false,
+  "folder": "Azul pos1",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": -142.6960517220166
+  },
+  "useDefaultConstraints": true
+}
