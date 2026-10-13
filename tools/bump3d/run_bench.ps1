@@ -36,6 +36,9 @@ $env:CONDA_PREFIX = $condaEnv
 $env:OGRE_RESOURCE_PATH = "$condaEnv\Library\bin"
 $env:OGRE2_RESOURCE_PATH = "$condaEnv\Library\bin\OGRE-Next"
 $env:SDF_PATH = "$condaEnv\Library\share\sdformat13\1.10"
+# Particion propia: dos corridas a la vez (o MARS Studio abierto, que tambien usa el mundo
+# "mars") no se mezclan los topicos.
+$env:GZ_PARTITION = "bump3d_$PID"
 $py = "$condaEnv\python.exe"
 
 & $py "$here\gen_bump_bench.py" --mars-sim $MarsSim --speeds $Speeds --directions $Directions --lifts-cm $LiftsCm 2>$null
@@ -47,8 +50,10 @@ $results = Join-Path $build "resultados.json"
 $procs = @()
 try {
   # El medidor se suscribe ANTES de que arranque la fisica para no perder el inicio.
-  $med = Start-Process -FilePath $py -ArgumentList "`"$here\measure_bench.py`"", "`"$meta`"", "--seconds", $Seconds,
-    "--timeout", ([int]($Seconds * 20 + 60)), "--out", "`"$results`"" -NoNewWindow -PassThru `
+  $medArgs = @("`"$here\measure_bench.py`"", "`"$meta`"", "--seconds", $Seconds,
+               "--timeout", ([int]($Seconds * 20 + 60)), "--out", "`"$results`"")
+  if (-not $Headless) { $medArgs += @("--unpause-after", "12") }
+  $med = Start-Process -FilePath $py -ArgumentList $medArgs -NoNewWindow -PassThru `
     -RedirectStandardOutput "$build\medicion.txt" -RedirectStandardError "$build\medicion.err"
   $null = $med.Handle; $procs += $med
   Start-Sleep -Seconds 2
@@ -59,14 +64,15 @@ try {
       -WorkingDirectory $MarsSim -NoNewWindow -PassThru -RedirectStandardOutput "$build\servidor.txt" -RedirectStandardError "$build\servidor.err"
     $null = $srv.Handle; $procs += $srv
   } else {
-    # Con ventana: el servidor arranca PAUSADO hasta que abre la ventana; dale Play (abajo a la izquierda).
+    # Con ventana: el servidor arranca PAUSADO y el medidor le da Play 12 s despues, cuando la
+    # ventana ya cargo las mallas (asi se ve el cruce desde el principio).
     $srv = Start-Process -FilePath "$MarsSim\build\mars-sim-server.exe" -ArgumentList "`"$world`"" `
       -WorkingDirectory $MarsSim -NoNewWindow -PassThru -RedirectStandardOutput "$build\servidor.txt" -RedirectStandardError "$build\servidor.err"
     $null = $srv.Handle; $procs += $srv
     $gui = Start-Process -FilePath "$MarsSim\build\mars-sim-gui.exe" -ArgumentList "`"$build\gui.config`"" `
       -WorkingDirectory $MarsSim -PassThru -RedirectStandardOutput "$build\gui.txt" -RedirectStandardError "$build\gui.err"
     $null = $gui.Handle; $procs += $gui
-    Write-Host "Ventana abierta. Dale Play; la tabla sale cuando la simulacion llega a $Seconds s." -ForegroundColor Cyan
+    Write-Host "Ventana abierta; arranca sola en ~12 s. La tabla sale cuando la simulacion llega a $Seconds s." -ForegroundColor Cyan
   }
   $med.WaitForExit()
   Get-Content "$build\medicion.txt"

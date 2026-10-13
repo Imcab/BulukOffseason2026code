@@ -18,7 +18,9 @@ from pathlib import Path
 
 from gz.msgs.clock_pb2 import Clock
 from gz.msgs.contacts_pb2 import Contacts
+from gz.msgs.boolean_pb2 import Boolean
 from gz.msgs.double_pb2 import Double
+from gz.msgs.world_control_pb2 import WorldControl
 from gz.msgs.pose_v_pb2 import Pose_V
 from gz.transport import Node
 
@@ -42,6 +44,8 @@ def main():
     ap.add_argument("--seconds", type=float, default=10.0, help="segundos de SIMULACION a medir")
     ap.add_argument("--timeout", type=float, default=180.0, help="segundos reales maximos esperando")
     ap.add_argument("--out", type=Path, default=None)
+    ap.add_argument("--unpause-after", type=float, default=None,
+                    help="segundos reales a esperar (a que abra la ventana) antes de darle Play")
     a = ap.parse_args()
     meta = json.loads(a.meta.read_text(encoding="utf-8"))
     scenes = {s["name"]: s for s in meta["scenes"]}
@@ -104,6 +108,10 @@ def main():
     stop_pubs = {n: [node.advertise(f"/model/{n}/joint/{c}_drive_joint/cmd_vel", Double)
                      for c in ("fl", "fr", "bl", "br")] for n in scenes}
     stopped = set()
+    if a.unpause_after is not None:
+        time.sleep(a.unpause_after)
+        ok, _ = node.request("/world/mars/control", WorldControl(pause=False), WorldControl, Boolean, 5000)
+        print("[medir] simulacion en marcha" if ok else "[medir] no pude darle Play; usa el boton de la ventana")
     t0 = time.time()
     while sim_t[0] < a.seconds and time.time() - t0 < a.timeout:
         time.sleep(0.1)
