@@ -186,8 +186,9 @@ def build(mars_sim: Path, directions, speeds, lifts) -> tuple[str, list]:
         for lift in lifts:
             for v in speeds:
                 tag = f"{d}_{str(v).replace('.', 'p')}ms" + (f"_mas{round(lift * 100)}cm" if lift else "")
+                ux, uy = DIRECTIONS[d]
                 scenes.append({"name": tag, "direction": d, "speed": v, "lift": lift,
-                               "x": col * COLUMN, "y": row * LANE})
+                               "x": col * COLUMN, "y": row * LANE, "yaw": -math.atan2(uy, ux)})
                 row += 1
     parts = [
         '<?xml version="1.0" ?>',
@@ -251,7 +252,7 @@ def main():
     sdf, scenes = build(a.mars_sim, dirs, speeds, lifts)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(sdf, encoding="utf-8", newline="\n")
-    meta = {"bump": {"x0": BUMP_X0, "half": BUMP_HALF, "height": BUMP_HEIGHT}, "lane": LANE,
+    meta = {"bump": {"x0": BUMP_X0, "half": BUMP_HALF, "height": BUMP_HEIGHT}, "lane": LANE, "wheel_radius": WHEEL_RADIUS,
             "wheel_torque_max_nm": WHEEL_TORQUE_MAX, "scenes": scenes}
     a.out.with_suffix(".json").write_text(json.dumps(meta, indent=1), encoding="utf-8")
     gui_config(a.mars_sim, scenes, a.out.with_name("gui.config"))

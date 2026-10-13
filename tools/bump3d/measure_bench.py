@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -23,6 +25,34 @@ from gz.msgs.double_pb2 import Double
 from gz.msgs.world_control_pb2 import WorldControl
 from gz.msgs.pose_v_pb2 import Pose_V
 from gz.transport import Node
+
+# Llamada de servicio en un proceso aparte. Desde Python, la primera peticion de un proceso a
+# gz-sim contesta y las siguientes a veces no (timeout); un proceso por llamada es lo confiable.
+_CALL = r"""
+import sys
+from gz.transport import Node
+from gz.msgs.boolean_pb2 import Boolean
+from gz.msgs.pose_v_pb2 import Pose_V
+from gz.msgs.world_control_pb2 import WorldControl
+T = {"Pose_V": Pose_V, "WorldControl": WorldControl}[sys.argv[2]]
+req = T()
+req.ParseFromString(sys.stdin.buffer.read())
+ok, rep = Node().request(sys.argv[1], req, T, Boolean, 5000)
+print("OK" if ok and rep.data else "FAIL")
+"""
+
+
+def gz_call(service: str, msg) -> bool:
+    for _ in range(3):
+        try:
+            r = subprocess.run([sys.executable, "-c", _CALL, service, type(msg).__name__],
+                               input=msg.SerializeToString(), capture_output=True, timeout=30)
+        except subprocess.TimeoutExpired:
+            continue
+        if b"OK" in r.stdout:
+            return True
+    return False
+
 
 ROBOT_HALF = 0.64  # media diagonal del bumper: el robot entero ya paso cuando su centro esta asi de lejos
 
@@ -46,6 +76,8 @@ def main():
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--unpause-after", type=float, default=None,
                     help="segundos reales a esperar (a que abra la ventana) antes de darle Play")
+    ap.add_argument("--loop", action="store_true",
+                    help="cuando todas las escenas terminan, reinicia el mundo y las repite (para la ventana)")
     a = ap.parse_args()
     meta = json.loads(a.meta.read_text(encoding="utf-8"))
     scenes = {s["name"]: s for s in meta["scenes"]}
@@ -55,6 +87,17 @@ def main():
               "floor": False} for n in scenes}
     lock = threading.Lock()
     sim_t = [0.0]
+    # Estado de la vuelta actual (en --loop se reinicia en cada vuelta; st solo mide la primera).
+    cyc = {}
+    recording = [True]
+    resetting = [False]
+
+    cyc_t0 = [0.0]  # tiempo de simulacion al empezar la vuelta (no se reinicia entre vueltas)
+
+    def new_cycle(t0=0.0):
+        cyc_t0[0] = t0
+        cyc.clear()
+        cyc.update({n: {"t_cross": None, "moved_t": t0, "ref_x": 0.0} for n in scenes})
 
     def on_clock(msg: Clock):
         sim_t[0] = msg.sim.sec + msg.sim.nsec * 1e-9
@@ -68,6 +111,14 @@ def main():
                     continue
                 x0, y0 = scenes[p.name]["x"], scenes[p.name]["y"]
                 px = p.position.x - x0
+                c = cyc.get(p.name)
+                if c is not None and not resetting[0]:
+                    if c["t_cross"] is None and px > end_x:
+                        c["t_cross"] = t
+                    if abs(px - c["ref_x"]) > 0.03:
+                        c["moved_t"], c["ref_x"] = t, px
+                if not recording[0]:
+                    continue
                 s["x"], s["lat"] = px, p.position.y - y0
                 s["max_z"] = max(s["max_z"], p.position.z)
                 pt = pitch_of(p.orientation)
@@ -87,6 +138,8 @@ def main():
             floor = any("ground_plane" in n for n in names)
             t = sim_t[0]
             with lock:
+                if not recording[0]:
+                    return
                 s = st[name]
                 s["touch"] = hit
                 if floor:
@@ -108,25 +161,100 @@ def main():
     stop_pubs = {n: [node.advertise(f"/model/{n}/joint/{c}_drive_joint/cmd_vel", Double)
                      for c in ("fl", "fr", "bl", "br")] for n in scenes}
     stopped = set()
+    new_cycle()
     if a.unpause_after is not None:
         time.sleep(a.unpause_after)
-        ok, _ = node.request("/world/mars/control", WorldControl(pause=False), WorldControl, Boolean, 5000)
+        ok = gz_call("/world/mars/control", WorldControl(pause=False))
         print("[medir] simulacion en marcha" if ok else "[medir] no pude darle Play; usa el boton de la ventana")
-    t0 = time.time()
-    while sim_t[0] < a.seconds and time.time() - t0 < a.timeout:
-        time.sleep(0.1)
-        with lock:
-            to_stop = [n for n, s in st.items()
-                       if n not in stopped and s["t_cross"] is not None and sim_t[0] > s["t_cross"] + 0.6]
-        for n in to_stop:
-            for pub in stop_pubs[n]:
-                pub.publish(Double(data=0.0))
-            stopped.add(n)
-    if sim_t[0] < a.seconds:
-        print(f"[medir] ojo: la simulacion solo llego a {sim_t[0]:.1f} s (esta corriendo el servidor?)")
+    def cycle_done(t):
+        """Todas las escenas terminaron: cruzaron y ya frenaron, o llevan 1.5 s sin avanzar."""
+        if t - cyc_t0[0] > a.seconds:
+            return True
+        return t - cyc_t0[0] > 2.0 and all((c["t_cross"] is not None and t > c["t_cross"] + 1.2) or t - c["moved_t"] > 1.5
+                               for c in cyc.values())
 
-    rows = []
+    def run_cycle():
+        """Corre una vuelta; False si el servidor dejo de avanzar (se cerro la ventana)."""
+        t0 = time.time()
+        last_t, last_change = sim_t[0], time.time()
+        while time.time() - t0 < a.timeout:
+            time.sleep(0.1)
+            if sim_t[0] != last_t:
+                last_t, last_change = sim_t[0], time.time()
+            elif time.time() - last_change > 5.0:
+                return False
+            with lock:
+                to_stop = [n for n, c in cyc.items()
+                           if n not in stopped and c["t_cross"] is not None and sim_t[0] > c["t_cross"] + 0.6]
+                done = cycle_done(sim_t[0])
+            for n in to_stop:
+                for pub in stop_pubs[n]:
+                    pub.publish(Double(data=0.0))
+                stopped.add(n)
+            if done if a.loop else sim_t[0] - cyc_t0[0] >= a.seconds:
+                return True
+        return False
+
+    def summary(k):
+        with lock:
+            n = sum(c["t_cross"] is not None for c in cyc.values())
+        print(f"[medir] vuelta {k}: {n} de {len(cyc)} cruzaron ({sim_t[0] - cyc_t0[0]:.1f} s)", flush=True)
+
+    alive = run_cycle()
+    if a.loop:
+        summary(1)
     with lock:
+        recording[0] = False
+    if not alive and sim_t[0] < a.seconds and not a.loop:
+        print(f"[medir] ojo: la simulacion solo llego a {sim_t[0]:.1f} s (esta corriendo el servidor?)")
+    report(st, scenes, sim_t[0], a.out)
+
+    # Bucle: frenar todos, regresar cada robot a su salida y volver a mandarle su velocidad.
+    # (El reset de mundo de gz-sim con 20 robots se queda colgado y no contesta.)
+    def back_to_start():
+        for pubs in stop_pubs.values():
+            for pub in pubs:
+                pub.publish(Double(data=0.0))
+        time.sleep(1.0)  # que frenen: el teletransporte no borra la velocidad
+        req = Pose_V()
+        for n, sc in scenes.items():
+            p = req.pose.add()
+            p.name = n
+            p.position.x, p.position.y, p.position.z = sc["x"], sc["y"], 0.003
+            p.orientation.w, p.orientation.z = math.cos(sc["yaw"] / 2), math.sin(sc["yaw"] / 2)
+        if not gz_call("/world/mars/set_pose_vector", req):
+            print("[medir] el servidor no acepto set_pose_vector", flush=True)
+            return False
+        time.sleep(0.3)
+        with lock:
+            new_cycle(sim_t[0])
+            stopped.clear()
+        for _ in range(3):
+            for n, sc in scenes.items():
+                w = sc["speed"] / meta.get("wheel_radius", 0.0508)
+                for pub in stop_pubs[n]:
+                    pub.publish(Double(data=w))
+            time.sleep(0.05)
+        return True
+
+    vuelta = 1
+    while a.loop and alive:
+        time.sleep(1.0)
+        print("[medir] regresando a la salida", flush=True)
+        if not back_to_start():
+            break
+        vuelta += 1
+        alive = run_cycle()
+        if alive:
+            summary(vuelta)
+        else:
+            print(f"[medir] la simulacion dejo de avanzar (t = {sim_t[0]:.2f} s)", flush=True)
+
+
+def report(st, scenes, t_end, out):
+    rows = []
+    sim_t = [t_end]
+    if True:  # ya no hay callbacks escribiendo en st (recording = False)
         for n, s in st.items():
             sc = scenes[n]
             hist = [x for t, x in s["x_hist"] if t > sim_t[0] - 1.0]
@@ -148,8 +276,9 @@ def main():
         print(f"{r['direccion']:16s} {('+%d cm' % r['lift_cm']) if r['lift_cm'] else 'actual':>6s} {r['vel']:4.1f} | "
               f"{r['resultado']:26s} {tc:>7s} {r['roce_s']:5.2f} {r['pitch_min']:5.1f}/{r['pitch_max']:4.1f} "
               f"{r['desvio_lateral']:6.2f}")
-    if a.out:
-        a.out.write_text(json.dumps({"sim_seconds": sim_t[0], "rows": rows}, indent=1), encoding="utf-8")
+    sys.stdout.flush()
+    if out:
+        out.write_text(json.dumps({"sim_seconds": sim_t[0], "rows": rows}, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

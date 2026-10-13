@@ -52,7 +52,7 @@ try {
   # El medidor se suscribe ANTES de que arranque la fisica para no perder el inicio.
   $medArgs = @("`"$here\measure_bench.py`"", "`"$meta`"", "--seconds", $Seconds,
                "--timeout", ([int]($Seconds * 20 + 60)), "--out", "`"$results`"")
-  if (-not $Headless) { $medArgs += @("--unpause-after", "12") }
+  if (-not $Headless) { $medArgs += @("--unpause-after", "12", "--loop") }
   $med = Start-Process -FilePath $py -ArgumentList $medArgs -NoNewWindow -PassThru `
     -RedirectStandardOutput "$build\medicion.txt" -RedirectStandardError "$build\medicion.err"
   $null = $med.Handle; $procs += $med
@@ -74,13 +74,15 @@ try {
     $null = $gui.Handle; $procs += $gui
     Write-Host "Ventana abierta; arranca sola en ~12 s. La tabla sale cuando la simulacion llega a $Seconds s." -ForegroundColor Cyan
   }
-  $med.WaitForExit()
-  Get-Content "$build\medicion.txt"
-  Write-Host "resultados: $results"
-  if (-not $Headless) {
-    Write-Host "Cierra la ventana de Gazebo para terminar." -ForegroundColor Cyan
+  if ($Headless) {
+    $med.WaitForExit()
+  } else {
+    # En bucle: el medidor reinicia el mundo cada vez que todas las escenas terminan.
+    Write-Host "Se repite en bucle. Cierra la ventana de Gazebo para terminar." -ForegroundColor Cyan
     $gui.WaitForExit()
   }
+  Get-Content "$build\medicion.txt" | Where-Object { $_ -notmatch '^\[medir\] vuelta' }
+  Write-Host "resultados (primera vuelta): $results"
 } finally {
   foreach ($p in $procs) { if ($p -and -not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
 }

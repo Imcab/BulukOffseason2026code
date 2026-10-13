@@ -13,7 +13,9 @@ con la colisión del robot de MARS. No se despliega al robot.
 .\tools\bump3d\run_bench.ps1 -Speeds 1,2 -LiftsCm 0,4 -Directions diamante_intake,intake_atras
 ```
 
-Resultados en `build/resultados.json` (incluye la traza x, z, pitch de cada escena cada 20 ms).
+Con ventana, las escenas se repiten en bucle: cuando todas terminan, cada robot regresa a su
+salida y vuelve a cruzar. Resultados (de la primera vuelta) en `build/resultados.json`, con la
+traza x, z, pitch de cada escena cada 20 ms.
 
 ## Qué usa de MARS (sin modificar nada de su instalación)
 
