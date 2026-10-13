@@ -113,7 +113,7 @@ def main():
                 px = p.position.x - x0
                 c = cyc.get(p.name)
                 if c is not None and not resetting[0]:
-                    if c["t_cross"] is None and px > end_x:
+                    if c["t_cross"] is None and px > scenes[p.name].get("end_x", end_x):
                         c["t_cross"] = t
                     if abs(px - c["ref_x"]) > 0.03:
                         c["moved_t"], c["ref_x"] = t, px
@@ -123,7 +123,7 @@ def main():
                 s["max_z"] = max(s["max_z"], p.position.z)
                 pt = pitch_of(p.orientation)
                 s["max_pitch"], s["min_pitch"] = max(s["max_pitch"], pt), min(s["min_pitch"], pt)
-                if s["t_cross"] is None and px > end_x:
+                if s["t_cross"] is None and px > scenes[p.name].get("end_x", end_x):
                     s["t_cross"] = t
                 s["x_hist"].append((t, px))
                 # traza cada 20 ms: t, x, y, z, pitch, tocando el bump (para el visor y para depurar)
@@ -136,12 +136,27 @@ def main():
             names = [c.collision1.name + "|" + c.collision2.name for c in msg.contact]
             hit = any("bump_" in n for n in names)
             floor = any("ground_plane" in n for n in names)
+            pairs = set()
+            for c in msg.contact:
+                a, b = c.collision1.name, c.collision2.name
+                mine, other = (a, b) if a.startswith(name + "::") else (b, a)
+                part = mine.rsplit("::", 1)[-1]
+                part = "intake" if part.startswith("intake_") else part
+                obj = other.rsplit("::", 1)[-1]
+                if "ground_plane" in other:
+                    obj = "piso"
+                elif obj.startswith(("bump_", "rampa_")) or other.startswith("bump_"):
+                    obj = "bump"
+                elif obj.startswith("trench_"):
+                    obj = "trench"
+                pairs.add(f"{part}>{obj}")
             t = sim_t[0]
             with lock:
                 if not recording[0]:
                     return
                 s = st[name]
                 s["touch"] = hit
+                s.setdefault("pairs", set()).update(pairs)
                 if floor:
                     s["floor"] = True
                 if hit:
@@ -181,7 +196,7 @@ def main():
             time.sleep(0.1)
             if sim_t[0] != last_t:
                 last_t, last_change = sim_t[0], time.time()
-            elif time.time() - last_change > 5.0:
+            elif sim_t[0] > 0 and time.time() - last_change > 5.0:  # cargar muchos robots tarda: solo ya arrancado
                 return False
             with lock:
                 to_stop = [n for n, c in cyc.items()
@@ -268,11 +283,23 @@ def report(st, scenes, t_end, out):
             rows.append({"escena": n, "direccion": sc["direction"], "vel": sc["speed"], "lift_cm": round(sc["lift"] * 100),
                          "resultado": res, "t_cruce": s["t_cross"], "roce_s": round(s["contact_s"], 2),
                          "pitch_min": round(s["min_pitch"], 1), "pitch_max": round(s["max_pitch"], 1),
-                         "x_final": round(s["x"], 2), "desvio_lateral": round(s["lat"], 2), "traza": s["trace"]})
-    print(f"{'direccion':16s} {'chasis':>6s} {'vel':>4s} | {'resultado':26s} {'t cruce':>7s} {'roce':>5s} "
-          f"{'pitch':>11s} {'desvio':>6s}")
+                         "x_final": round(s["x"], 2), "desvio_lateral": round(s["lat"], 2),
+                         "toques": sorted(q for q in s.get("pairs", set()) if not q.endswith(">piso")),
+                         "offset_cm": round(sc.get("offset", 0) * 100), "angulo": sc.get("angle", 0),
+                         "intake_hacia": sc.get("intake_side", ""),
+                         "traza": s["trace"]})
+    field = any("offset" in sc for sc in scenes.values())
+    if field:
+        print(f"{'direccion':22s} {'intake':>8s} {'lado':>5s} {'ang':>4s} {'vel':>4s} | {'resultado':26s} {'t cruce':>7s} toca")
+    else:
+        print(f"{'direccion':16s} {'chasis':>6s} {'vel':>4s} | {'resultado':26s} {'t cruce':>7s} {'roce':>5s} "
+              f"{'pitch':>11s} {'desvio':>6s}")
     for r in rows:
         tc = f"{r['t_cruce']:.2f}" if r["t_cruce"] is not None else "-"
+        if field:
+            print(f"{r['direccion']:22s} {r['intake_hacia']:>8s} {r['offset_cm']:+5d} {r['angulo']:+4.0f} {r['vel']:4.1f} | "
+                  f"{r['resultado']:26s} {tc:>7s} {', '.join(r['toques'])}")
+            continue
         print(f"{r['direccion']:16s} {('+%d cm' % r['lift_cm']) if r['lift_cm'] else 'actual':>6s} {r['vel']:4.1f} | "
               f"{r['resultado']:26s} {tc:>7s} {r['roce_s']:5.2f} {r['pitch_min']:5.1f}/{r['pitch_max']:4.1f} "
               f"{r['desvio_lateral']:6.2f}")

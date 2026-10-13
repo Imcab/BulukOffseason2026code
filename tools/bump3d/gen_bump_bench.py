@@ -60,7 +60,12 @@ DIRECTIONS = {
     "de_lado": (0.0, 1.0),
     "diamante_intake": (R2, R2),
     "diamante_atras": (-R2, R2),
+    # espejos: en la cancha importa de que lado queda el intake (hub o trench)
+    "de_lado_espejo": (0.0, -1.0),
+    "diamante_intake_espejo": (R2, -R2),
+    "diamante_atras_espejo": (-R2, -R2),
 }
+BENCH_DIRECTIONS = ["intake_adelante", "intake_atras", "de_lado", "diamante_intake", "diamante_atras"]
 
 
 def default_mars_sim() -> Path:
@@ -88,10 +93,12 @@ def robot_model(mars_sim: Path) -> tuple[str, dict]:
 
 
 def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: str, speed: float,
-                lift: float) -> str:
+                lift: float, travel_yaw: float = 0.0, intake: dict | None = None) -> str:
+    """travel_yaw: hacia donde avanza en el mundo (0 = +X). intake: intake_profile.json para
+    que el intake extendido choque (sin el, como en MARS, el intake no tiene colision)."""
     ux, uy = DIRECTIONS[direction]
     alpha = math.atan2(uy, ux)           # angulo de los modulos en el marco del robot
-    yaw = -alpha                         # girar el robot para que ese vector apunte a +X del mundo
+    yaw = travel_yaw - alpha             # girar el robot para que ese vector apunte a travel_yaw
     t = base.replace('<model name="robot">', f'<model name="{name}">', 1)
     t = re.sub(r"(<model name=\"[^\"]+\">\s*<pose>)[^<]*(</pose>)",
                lambda m: f"{m.group(1)}{x:.4f} {y:.4f} 0 0 0 {yaw:.6f}{m.group(2)}", t, count=1)
@@ -126,9 +133,23 @@ def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: 
                                  f"</ode></friction></surface>{m.group(2)}", t, count=1, flags=re.S)
         assert n == 1, f"no encontre la colision {col}"
 
+    # Intake extendido: cajas de colision en el chasis (su joint ya es fijo).
+    watched = ["bumper"]
+    if intake:
+        cols = []
+        for i, b in enumerate(intake["boxes"]):
+            cx, cy, cz = (b["x0"] + b["x1"]) / 2, (b["y0"] + b["y1"]) / 2, (b["z0"] + b["z1"]) / 2
+            size = f'{b["x1"] - b["x0"]:.4f} {b["y1"] - b["y0"]:.4f} {b["z1"] - b["z0"]:.4f}'
+            cols.append(f'<collision name="intake_{i}"><pose>{cx:.4f} {cy:.4f} {cz - 0.2:.4f} 0 0 0</pose>'
+                        f"<geometry><box><size>{size}</size></box></geometry><surface><friction><ode>"
+                        f"<mu>{MU_BUMPER}</mu><mu2>{MU_BUMPER}</mu2></ode></friction></surface></collision>")
+            watched.append(f"intake_{i}")
+        t = t.replace('<collision name="torre">', "\n        ".join(cols) + '\n        <collision name="torre">', 1)
+    watched.append("torre")
+
     # Publica en /world/mars/model/<escena>/link/chassis/sensor/contacto/contact.
     sensor = ('\n        <sensor name="contacto" type="contact"><always_on>1</always_on><update_rate>250</update_rate>'
-              '<contact><collision>bumper</collision></contact></sensor>')
+              '<contact>' + "".join(f"<collision>{c}</collision>" for c in watched) + '</contact></sensor>')
     t = t.replace('<collision name="torre">', sensor.strip() + '\n        <collision name="torre">', 1)
 
     # Fuera MarsLink; un JointController de velocidad por rueda.
@@ -239,7 +260,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mars-sim", type=Path, default=default_mars_sim(), help="carpeta sim/ de la instalacion de MARS")
     ap.add_argument("--speeds", default="0.5,1,2,3")
-    ap.add_argument("--directions", default=",".join(DIRECTIONS))
+    ap.add_argument("--directions", default=",".join(BENCH_DIRECTIONS))
     ap.add_argument("--lifts-cm", default="0")
     ap.add_argument("--out", type=Path, default=HERE / "build" / "bump_bench.sdf")
     a = ap.parse_args()

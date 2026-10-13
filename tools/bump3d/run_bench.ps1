@@ -3,6 +3,8 @@
 #   .\run_bench.ps1                         genera el mundo, abre la ventana 3D y mide
 #   .\run_bench.ps1 -Headless -Seconds 12   sin ventana: solo la tabla de resultados
 #   .\run_bench.ps1 -Speeds 1,2 -LiftsCm 0,4
+#   .\run_bench.ps1 -Cancha                 hub + bump + trench reales, intake extendido
+#   .\run_bench.ps1 -Cancha -OffsetsCm -30,0,30 -AnglesDeg -10,0,10 -Speeds 2
 #
 # No toca el codigo del robot ni la instalacion de MARS: solo usa sus ejecutables
 # (mars-sim-server, mars-sim-gui), su entorno conda y el modelo offseason2026.
@@ -12,6 +14,10 @@ param(
   [string]$Speeds = "0.5,1,2,3",
   [string]$Directions = "intake_adelante,intake_atras,de_lado,diamante_intake,diamante_atras",
   [string]$LiftsCm = "0",
+  [switch]$Cancha,
+  [string]$OffsetsCm = "-20,0,20",
+  [string]$AnglesDeg = "0",
+  [switch]$SinIntake,
   [string]$MarsSim = "$env:LOCALAPPDATA\Programs\MARS\sim"
 )
 $ErrorActionPreference = "Stop"
@@ -41,10 +47,25 @@ $env:SDF_PATH = "$condaEnv\Library\share\sdformat13\1.10"
 $env:GZ_PARTITION = "bump3d_$PID"
 $py = "$condaEnv\python.exe"
 
-& $py "$here\gen_bump_bench.py" --mars-sim $MarsSim --speeds $Speeds --directions $Directions --lifts-cm $LiftsCm 2>$null
-if ($LASTEXITCODE -ne 0) { throw "fallo gen_bump_bench.py" }
-$world = Join-Path $build "bump_bench.sdf"
-$meta = Join-Path $build "bump_bench.json"
+if ($Cancha) {
+  if (-not $PSBoundParameters.ContainsKey("Speeds")) { $Speeds = "2" }
+  if (-not $PSBoundParameters.ContainsKey("Directions")) {
+    # en la cancha importa de que lado queda el intake: tambien los espejos
+    $Directions = "intake_adelante,intake_atras,de_lado,de_lado_espejo,diamante_intake,diamante_intake_espejo,diamante_atras,diamante_atras_espejo"
+  }
+  $genArgs = @("$here\gen_field_bench.py", "--mars-sim", $MarsSim, "--speeds", $Speeds, "--directions", $Directions,
+               "--offsets-cm=$OffsetsCm", "--angles-deg=$AnglesDeg")  # con '=': "-20,..." no es una opcion
+  if ($SinIntake) { $genArgs += "--sin-intake" }
+  & $py @genArgs 2>$null
+  if ($LASTEXITCODE -ne 0) { throw "fallo gen_field_bench.py" }
+  $world = Join-Path $build "field_bench.sdf"
+  $meta = Join-Path $build "field_bench.json"
+} else {
+  & $py "$here\gen_bump_bench.py" --mars-sim $MarsSim --speeds $Speeds --directions $Directions --lifts-cm $LiftsCm 2>$null
+  if ($LASTEXITCODE -ne 0) { throw "fallo gen_bump_bench.py" }
+  $world = Join-Path $build "bump_bench.sdf"
+  $meta = Join-Path $build "bump_bench.json"
+}
 $results = Join-Path $build "resultados.json"
 
 $procs = @()

@@ -17,6 +17,22 @@ Con ventana, las escenas se repiten en bucle: cuando todas terminan, cada robot 
 salida y vuelve a cruzar. Resultados (de la primera vuelta) en `build/resultados.json`, con la
 traza x, z, pitch de cada escena cada 20 ms.
 
+## En la cancha real: hub + bump + trench, intake extendido
+
+```powershell
+.	oolsump3dun_bench.ps1 -Cancha                    # ventana, en bucle
+.	oolsump3dun_bench.ps1 -Cancha -Headless -OffsetsCm -30,-15,0,15,30 -AnglesDeg -10,0,10
+```
+
+`gen_field_bench.py` copia el tramo de la cancha 2026 donde se cruza el bump (medidas del GLB
+oficial): el hub de un lado y el riser del trench del otro, que está ENCIMA de los últimos 30 cm
+del bump. El pasillo libre es de 1.70 m. Cada escena varía dirección (con espejos, porque importa
+de qué lado queda el intake), posición lateral, ángulo de llegada y velocidad, y la tabla dice qué
+parte del robot tocó qué (`intake>hub`, `bumper>trench`...).
+
+El intake extendido choca: `extract_intake.py` saca del STL lo que sobresale del bumper (20.6 cm,
+lo más bajo a 4 cm) como cajas de colisión → `intake_profile.json`.
+
 ## Qué usa de MARS (sin modificar nada de su instalación)
 
 - `mars-sim-server.exe` / `mars-sim-gui.exe` y el entorno conda `mars-sim`.
