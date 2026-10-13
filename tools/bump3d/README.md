@@ -20,8 +20,10 @@ traza x, z, pitch de cada escena cada 20 ms.
 ## En la cancha real: hub + bump + trench, intake extendido
 
 ```powershell
-.	oolsump3dun_bench.ps1 -Cancha                    # ventana, en bucle
-.	oolsump3dun_bench.ps1 -Cancha -Headless -OffsetsCm -30,-15,0,15,30 -AnglesDeg -10,0,10
+.\tools\bump3d\run_bench.ps1 -Cancha                    # ventana, en bucle
+.\tools\bump3d\run_bench.ps1 -Cancha -Headless -OffsetsCm -30,-15,0,15,30 -AnglesDeg -10,0,10
+.	oolsump3d
+un_bench.ps1 -Cancha -Headless -OffsetsCm -30,-15,0,15,30 -AnglesDeg -10,0,10
 ```
 
 `gen_field_bench.py` copia el tramo de la cancha 2026 donde se cruza el bump (medidas del GLB
