@@ -79,31 +79,37 @@ def field_slice(tag: str, ox: float, oy: float) -> str:
     return "\n".join(parts)
 
 
-def build(mars_sim: Path, directions, offsets, angles, speeds, intake: dict | None):
+def build(mars_sim: Path, directions, offsets, angles, speeds, intake: dict | None, arms, reverse=False):
     base, mec = gb.robot_model(mars_sim)
     scenes, body = [], []
-    rows = list(itertools.product(offsets, angles, speeds))
+    rows = list(itertools.product(offsets, angles, speeds, arms))
     for col, d in enumerate(directions):
-        for row, (off, angle, v) in enumerate(rows):
+        for row, (off, angle, v, arm) in enumerate(rows):
             ox, oy = col * SLICE_DX, row * SLICE_DY
-            th = math.radians(angle)
+            # regreso: viene de la zona neutral hacia la alianza (avanza hacia -x)
+            th = math.radians(angle) + (math.pi if reverse else 0.0)
+            sign = -1.0 if reverse else 1.0
             # pasa por (bump, carril + off); arranca START_BEFORE antes a lo largo de su avance
             px, py = BUMP_C[0] + ox, LANE_Y + off + oy
             sx, sy = px - START_BEFORE * math.cos(th), py - START_BEFORE * math.sin(th)
-            tag = f"{d}_o{round(off * 100):+d}_a{round(angle):+d}_{str(v).replace('.', 'p')}ms".replace("+", "p").replace("-", "m")
+            tag = ("reg_" if reverse else "") + f"{d}_o{round(off * 100):+d}_a{round(angle):+d}_{str(v).replace('.', 'p')}ms".replace("+", "p").replace("-", "m")
+            if arm is not None:
+                tag += f"_b{round(arm)}"
             ux, uy = gb.DIRECTIONS[d]
             yaw = th - math.atan2(uy, ux)
             # hacia donde mira el intake (+X del modelo) en el mundo: -y = hub, +y = trench
             iy = math.sin(yaw)
-            side = "hub" if iy < -0.3 else ("trench" if iy > 0.3 else ("adelante" if math.cos(yaw) > 0 else "atras"))
+            rel = math.cos(yaw - th)            # intake respecto al sentido de avance
+            side = "hub" if iy < -0.3 else ("trench" if iy > 0.3 else ("adelante" if rel > 0 else "atras"))
             scenes.append({"name": tag, "direction": d, "speed": v, "lift": 0.0, "offset": off, "angle": angle,
-                           "intake_side": side,
-                           "x": sx, "y": sy, "yaw": yaw,
+                           "intake_side": side, "arm_deg": arm,
+                           "x": sx, "y": sy, "yaw": yaw, "sign": sign, "reverse": reverse,
                            # cruzo cuando su centro pasa 0.8 m mas alla del final del bump (en x)
-                           "end_x": (BUMP_C[0] + gb.BUMP_HALF + 0.8) + ox - sx})
+                           "end_x": sign * (BUMP_C[0] + sign * (gb.BUMP_HALF + 0.8) + ox - sx)})
             body.append(f"    <!-- {tag} -->")
             body.append(field_slice(tag, ox, oy))
-            body.append("    " + gb.scene_robot(base, mec, tag, sx, sy, d, v, 0.0, travel_yaw=th, intake=intake))
+            body.append("    " + gb.scene_robot(base, mec, tag, sx, sy, d, v, 0.0, travel_yaw=th, intake=intake,
+                                               arm_deg=arm))
     head = [
         '<?xml version="1.0" ?>', '<sdf version="1.11">', '  <world name="mars">',
         '    <physics name="250hz" type="ignored"><max_step_size>0.004</max_step_size>'
@@ -134,6 +140,10 @@ def main():
     ap.add_argument("--angles-deg", default="0", help="angulo de llegada respecto a perpendicular al bump")
     ap.add_argument("--speeds", default="2")
     ap.add_argument("--sin-intake", action="store_true", help="intake sin colision (como el mundo de MARS)")
+    ap.add_argument("--intake-rigido", action="store_true", help="intake como bloque pegado al chasis (modelo viejo)")
+    ap.add_argument("--regreso", action="store_true", help="cruza de la zona neutral hacia la alianza")
+    ap.add_argument("--brazo-deg", default="0",
+                    help="cuanto levantar el brazo del intake durante el cruce (0 = abajo, contra su tope)")
     ap.add_argument("--intake-profile", type=Path, default=HERE / "intake_profile.json")
     ap.add_argument("--out", type=Path, default=HERE / "build" / "field_bench.sdf")
     a = ap.parse_args()
@@ -145,7 +155,8 @@ def main():
     angles = [float(s) for s in a.angles_deg.split(",")]
     speeds = [float(s) for s in a.speeds.split(",")]
     intake = None if a.sin_intake else json.loads(a.intake_profile.read_text(encoding="utf-8"))
-    sdf, scenes = build(a.mars_sim, dirs, offsets, angles, speeds, intake)
+    arms = [None] if (a.intake_rigido or intake is None) else [float(s) for s in a.brazo_deg.split(",")]
+    sdf, scenes = build(a.mars_sim, dirs, offsets, angles, speeds, intake, arms, reverse=a.regreso)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(sdf, encoding="utf-8", newline="\n")
     meta = {"kind": "field", "corridor_y": CORRIDOR, "wheel_radius": gb.WHEEL_RADIUS, "intake": intake is not None,

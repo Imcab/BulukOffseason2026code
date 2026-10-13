@@ -32,6 +32,15 @@ del bump. El pasillo libre es de 1.70 m. Cada escena varía dirección (con espe
 de qué lado queda el intake), posición lateral, ángulo de llegada y velocidad, y la tabla dice qué
 parte del robot tocó qué (`intake>hub`, `bumper>trench`...).
 
+El intake es un BRAZO (por default): pivote del `mecanismo.json` de MARS, sostenido por su motor
+(NEO 45:1 a 40 A = ~45 N·m) con un `JointPositionController`. La tabla dice cuántos grados lo
+empujó el golpe y si el motor se saturó. `-BrazoDeg 0,10,110` prueba levantarlo (0 = abajo, 110 =
+guardado); `-Regreso` cruza de la zona neutral hacia la alianza (de regreso, cargado).
+
+```powershell
+.\tools\bump3d\run_bench.ps1 -Cancha -Regreso -Headless -Directions de_lado,intake_atras -BrazoDeg 0
+```
+
 El intake extendido choca: `extract_intake.py` saca del STL lo que sobresale del bumper (20.6 cm,
 lo más bajo a 4 cm) como cajas de colisión → `intake_profile.json`.
 

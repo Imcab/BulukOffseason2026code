@@ -18,6 +18,8 @@ param(
   [string]$OffsetsCm = "-20,0,20",
   [string]$AnglesDeg = "0",
   [switch]$SinIntake,
+  [string]$BrazoDeg = "0",
+  [switch]$Regreso,
   [string]$MarsSim = "$env:LOCALAPPDATA\Programs\MARS\sim"
 )
 $ErrorActionPreference = "Stop"
@@ -54,8 +56,9 @@ if ($Cancha) {
     $Directions = "intake_adelante,intake_atras,de_lado,de_lado_espejo,diamante_intake,diamante_intake_espejo,diamante_atras,diamante_atras_espejo"
   }
   $genArgs = @("$here\gen_field_bench.py", "--mars-sim", $MarsSim, "--speeds", $Speeds, "--directions", $Directions,
-               "--offsets-cm=$OffsetsCm", "--angles-deg=$AnglesDeg")  # con '=': "-20,..." no es una opcion
+               "--offsets-cm=$OffsetsCm", "--angles-deg=$AnglesDeg", "--brazo-deg=$BrazoDeg")  # con '=': "-20,..." no es una opcion
   if ($SinIntake) { $genArgs += "--sin-intake" }
+  if ($Regreso) { $genArgs += "--regreso" }
   & $py @genArgs 2>$null
   if ($LASTEXITCODE -ne 0) { throw "fallo gen_field_bench.py" }
   $world = Join-Path $build "field_bench.sdf"

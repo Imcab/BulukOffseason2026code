@@ -23,6 +23,7 @@ from gz.msgs.contacts_pb2 import Contacts
 from gz.msgs.boolean_pb2 import Boolean
 from gz.msgs.double_pb2 import Double
 from gz.msgs.world_control_pb2 import WorldControl
+from gz.msgs.model_pb2 import Model
 from gz.msgs.pose_v_pb2 import Pose_V
 from gz.transport import Node
 
@@ -54,7 +55,8 @@ def gz_call(service: str, msg) -> bool:
     return False
 
 
-ROBOT_HALF = 0.64  # media diagonal del bumper: el robot entero ya paso cuando su centro esta asi de lejos
+ROBOT_HALF = 0.64
+ARM_KP, ARM_TMAX = 500.0, 44.57  # gen_bump_bench.ARM_KP / ARM_TORQUE_MAX  # media diagonal del bumper: el robot entero ya paso cuando su centro esta asi de lejos
 
 
 def pitch_of(q) -> float:
@@ -110,7 +112,7 @@ def main():
                 if s is None:
                     continue
                 x0, y0 = scenes[p.name]["x"], scenes[p.name]["y"]
-                px = p.position.x - x0
+                px = scenes[p.name].get("sign", 1.0) * (p.position.x - x0)  # avance en su sentido
                 c = cyc.get(p.name)
                 if c is not None and not resetting[0]:
                     if c["t_cross"] is None and px > scenes[p.name].get("end_x", end_x):
@@ -126,10 +128,27 @@ def main():
                 if s["t_cross"] is None and px > scenes[p.name].get("end_x", end_x):
                     s["t_cross"] = t
                 s["x_hist"].append((t, px))
+                # Gazebo no publica nada cuando ya no hay contacto: apagar la marca si el ultimo es viejo
+                if s["touch"] and (s["last_contact"] is None or t - s["last_contact"] > 0.05):
+                    s["touch"] = False
                 # traza cada 20 ms: t, x, y, z, pitch, tocando el bump (para el visor y para depurar)
                 if not s["trace"] or t - s["trace"][-1][0] >= 0.02:
                     s["trace"].append([round(t, 3), round(px, 4), round(p.position.y - y0, 4),
                                        round(p.position.z, 4), round(pt, 2), int(s["touch"])])
+
+    def arm_cb(name):
+        """Cuanto empujaron el brazo hacia arriba respecto a donde lo sostiene su motor."""
+        target = -math.radians(scenes[name]["arm_deg"])
+
+        def cb(msg: Model):
+            for j in msg.joint:
+                if j.name.endswith("intake_arm_joint"):
+                    up = target - j.axis1.position          # + = lo levantaron
+                    with lock:
+                        s = st[name]
+                        if recording[0] and sim_t[0] > 0.5:  # el primer medio segundo el brazo se acomoda
+                            s["arm_up"] = max(s.get("arm_up", 0.0), up)
+        return cb
 
     def contact_cb(name):
         def cb(msg: Contacts):
@@ -171,6 +190,10 @@ def main():
     for n in scenes:
         # El sistema Contact publica en su propio topico (ignora <topic> del sensor).
         node.subscribe(Contacts, f"/world/mars/model/{n}/link/chassis/sensor/contacto/contact", contact_cb(n))
+        if scenes[n].get("arm_deg") is not None:
+            node.subscribe(Contacts, f"/world/mars/model/{n}/link/intake_arm/sensor/contacto_intake/contact",
+                           contact_cb(n))
+            node.subscribe(Model, f"/world/mars/model/{n}/joint_state", arm_cb(n))
 
     # Frenar cada robot poco despues de cruzar, para que la cuadricula se quede en cuadro.
     stop_pubs = {n: [node.advertise(f"/model/{n}/joint/{c}_drive_joint/cmd_vel", Double)
@@ -287,18 +310,27 @@ def report(st, scenes, t_end, out):
                          "toques": sorted(q for q in s.get("pairs", set()) if not q.endswith(">piso")),
                          "offset_cm": round(sc.get("offset", 0) * 100), "angulo": sc.get("angle", 0),
                          "intake_hacia": sc.get("intake_side", ""),
+                         "brazo_deg": sc.get("arm_deg"),
+                         "brazo_empujado_deg": round(math.degrees(s.get("arm_up", 0.0)), 1),
+                         "brazo_par_nm": round(min(ARM_KP * max(s.get("arm_up", 0.0), 0.0), ARM_TMAX), 1),
+                         "brazo_saturado": ARM_KP * s.get("arm_up", 0.0) >= ARM_TMAX,
                          "traza": s["trace"]})
     field = any("offset" in sc for sc in scenes.values())
     if field:
-        print(f"{'direccion':22s} {'intake':>8s} {'lado':>5s} {'ang':>4s} {'vel':>4s} | {'resultado':26s} {'t cruce':>7s} toca")
+        print(f"{'direccion':22s} {'intake':>8s} {'lado':>5s} {'ang':>4s} {'vel':>4s} {'brazo':>5s} | {'resultado':26s} "
+              f"{'t cruce':>7s} {'golpe al brazo':>16s} toca")
     else:
         print(f"{'direccion':16s} {'chasis':>6s} {'vel':>4s} | {'resultado':26s} {'t cruce':>7s} {'roce':>5s} "
               f"{'pitch':>11s} {'desvio':>6s}")
     for r in rows:
         tc = f"{r['t_cruce']:.2f}" if r["t_cruce"] is not None else "-"
         if field:
-            print(f"{r['direccion']:22s} {r['intake_hacia']:>8s} {r['offset_cm']:+5d} {r['angulo']:+4.0f} {r['vel']:4.1f} | "
-                  f"{r['resultado']:26s} {tc:>7s} {', '.join(r['toques'])}")
+            brazo = "-" if r["brazo_deg"] is None else f"{r['brazo_deg']:.0f}"
+            hit = any(q.startswith("intake>") for q in r["toques"])
+            golpe = ("-" if not hit else
+                     ("SATURA " if r["brazo_saturado"] else "") + f"{r['brazo_empujado_deg']:.0f} gr {r['brazo_par_nm']:.0f} Nm")
+            print(f"{r['direccion']:22s} {r['intake_hacia']:>8s} {r['offset_cm']:+5d} {r['angulo']:+4.0f} {r['vel']:4.1f} "
+                  f"{brazo:>5s} | {r['resultado']:26s} {tc:>7s} {golpe:>16s} {', '.join(r['toques'])}")
             continue
         print(f"{r['direccion']:16s} {('+%d cm' % r['lift_cm']) if r['lift_cm'] else 'actual':>6s} {r['vel']:4.1f} | "
               f"{r['resultado']:26s} {tc:>7s} {r['roce_s']:5.2f} {r['pitch_min']:5.1f}/{r['pitch_max']:4.1f} "

@@ -92,10 +92,22 @@ def robot_model(mars_sim: Path) -> tuple[str, dict]:
     return m.group(0), mec
 
 
+# Brazo del intake (mecanismo.json de MARS): pivote, NEO 45:1 a 40 A.
+ARM_PIVOT = (0.3007, 0.0124, 0.23)
+ARM_TORQUE_MAX = 40 * (2.6 / 105) * 45      # ~44.6 N*m en el pivote antes de que el motor ceda
+ARM_KP = 500.0                              # N*m/rad: satura con ~5 grados de error
+ARM_KD = 20.0
+
+
 def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: str, speed: float,
-                lift: float, travel_yaw: float = 0.0, intake: dict | None = None) -> str:
+                lift: float, travel_yaw: float = 0.0, intake: dict | None = None,
+                arm_deg: float | None = None) -> str:
     """travel_yaw: hacia donde avanza en el mundo (0 = +X). intake: intake_profile.json para
-    que el intake extendido choque (sin el, como en MARS, el intake no tiene colision)."""
+    que el intake extendido choque (sin el, como en MARS, el intake no tiene colision).
+    arm_deg: si no es None, el intake es un BRAZO con pivote, sostenido por su motor en
+    -arm_deg grados (0 = abajo, contra su tope; positivo = levantado); si es None, es un
+    bloque rigido pegado al chasis."""
+    arm = intake is not None and arm_deg is not None
     ux, uy = DIRECTIONS[direction]
     alpha = math.atan2(uy, ux)           # angulo de los modulos en el marco del robot
     yaw = travel_yaw - alpha             # girar el robot para que ese vector apunte a travel_yaw
@@ -113,7 +125,8 @@ def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: 
                lambda m: f'{m.group(1)}{m.group(2)} {m.group(3)} {m.group(4)} 0 0 {alpha:.6f}</pose>', t)
 
     # Direccion y mecanismos como joints fijos: nadie los manda en esta escena.
-    fixed = [f"{c}_steer_joint" for c in ("fl", "fr", "bl", "br")] + [f"{p['nombre']}_joint" for p in mec["piezas"]]
+    fixed = [f"{c}_steer_joint" for c in ("fl", "fr", "bl", "br")] + [f"{p['nombre']}_joint" for p in mec["piezas"]
+                                                                       if not (arm and p["nombre"] == "intake_arm")]
     for j in fixed:
         t, n = re.subn(rf'<joint name="{j}" type="\w+">(.*?)<axis>.*?</axis>\s*</joint>',
                        lambda m: f'<joint name="{j}" type="fixed">{m.group(1)}</joint>', t, count=1, flags=re.S)
@@ -135,7 +148,26 @@ def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: 
 
     # Intake extendido: cajas de colision en el chasis (su joint ya es fijo).
     watched = ["bumper"]
-    if intake:
+    if arm:
+        # Los rodillos van con el brazo, no con el chasis.
+        t, n = re.subn(r"<parent>chassis</parent><child>intake_rollers</child>",
+                       "<parent>intake_arm</parent><child>intake_rollers</child>", t, count=1)
+        assert n == 1, "no encontre el joint de los rodillos"
+        px, py, pz = ARM_PIVOT
+        arm_boxes = [(i, b) for i, b in enumerate(intake["boxes"]) if b["z1"] <= 0.4]  # la 1a franja es chasis
+        cols = []
+        for i, b in arm_boxes:
+            cx, cy, cz = (b["x0"] + b["x1"]) / 2, (b["y0"] + b["y1"]) / 2, (b["z0"] + b["z1"]) / 2
+            size = f'{b["x1"] - b["x0"]:.4f} {b["y1"] - b["y0"]:.4f} {b["z1"] - b["z0"]:.4f}'
+            cols.append(f'<collision name="intake_{i}"><pose>{cx - px:.4f} {cy - py:.4f} {cz - pz:.4f} 0 0 0</pose>'
+                        f"<geometry><box><size>{size}</size></box></geometry><surface><friction><ode>"
+                        f"<mu>{MU_BUMPER}</mu><mu2>{MU_BUMPER}</mu2></ode></friction></surface></collision>")
+        cols.append('<sensor name="contacto_intake" type="contact"><always_on>1</always_on><update_rate>250</update_rate>'
+                    "<contact>" + "".join(f"<collision>intake_{i}</collision>" for i, _ in arm_boxes) + "</contact></sensor>")
+        t, n = re.subn(r'(<link name="intake_arm">\s*<pose>[^<]*</pose>)',
+                       lambda m: m.group(1) + "\n        " + "\n        ".join(cols), t, count=1)
+        assert n == 1, "no encontre el link del brazo"
+    elif intake:
         cols = []
         for i, b in enumerate(intake["boxes"]):
             cx, cy, cz = (b["x0"] + b["x1"]) / 2, (b["y0"] + b["y1"]) / 2, (b["z0"] + b["z1"]) / 2
@@ -164,6 +196,15 @@ def scene_robot(base: str, mec: dict, name: str, x: float, y: float, direction: 
             f"<p_gain>2.0</p_gain><i_gain>5.0</i_gain><d_gain>0</d_gain><i_max>3</i_max><i_min>-3</i_min>"
             f"<cmd_max>{WHEEL_TORQUE_MAX:.3f}</cmd_max><cmd_min>{-WHEEL_TORQUE_MAX:.3f}</cmd_min>"
             f"<initial_velocity>{w:.4f}</initial_velocity></plugin>")
+    if arm:
+        # El motor del brazo: posicion con el par topado (si el golpe pasa de ~45 N*m, cede).
+        ctrl.append(
+            '      <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
+            f"<joint_name>intake_arm_joint</joint_name><p_gain>{ARM_KP}</p_gain><i_gain>0</i_gain><d_gain>{ARM_KD}</d_gain>"
+            f"<cmd_max>{ARM_TORQUE_MAX:.2f}</cmd_max><cmd_min>{-ARM_TORQUE_MAX:.2f}</cmd_min>"
+            f"<initial_position>{-math.radians(arm_deg):.5f}</initial_position></plugin>")
+        ctrl.append('      <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">'
+                    "<joint_name>intake_arm_joint</joint_name></plugin>")
     return t.replace("\n    </model>", "\n" + "\n".join(ctrl) + "\n    </model>", 1)
 
 
