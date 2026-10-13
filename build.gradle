@@ -137,6 +137,12 @@ test {
 wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
 
+// Fisica de Gazebo (MARS) en vez de la simulacion de CTRE: ./gradlew simulateJava -Pmarssim
+// Sin la bandera todo queda igual. Ver src/main/java/frc/robot/modules/swerve/MarsSimGlue.java.
+if (project.hasProperty('marssim')) {
+    wpi.sim.envVar("MARS_SIM", "1")
+}
+
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib
 // knows where to look for our Robot Class.

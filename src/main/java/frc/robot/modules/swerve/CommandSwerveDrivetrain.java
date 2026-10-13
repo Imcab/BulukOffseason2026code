@@ -51,6 +51,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
   private static final double kSimLoopPeriod = 0.004; // 4 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
+  /* Fisica de Gazebo (MARS). null = simulacion normal de CTRE; ver MarsSimGlue.habilitado(). */
+  private MarsSimGlue m_marsGlue = null;
 
   /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
   private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -137,6 +139,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
   /** Shared setup for every constructor. */
   private void initialize() {
     if (Utils.isSimulation()) {
+      if (MarsSimGlue.habilitado()) {
+        m_marsGlue = new MarsSimGlue(this);
+      }
       startSimThread();
     }
 
@@ -269,6 +274,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
               double deltaTime = currentTime - m_lastSimTime;
               m_lastSimTime = currentTime;
 
+              if (m_marsGlue != null) {
+                /* Gazebo da los encoders; si MARS no esta corriendo, el glue llama a updateSimState */
+                m_marsGlue.update();
+                return;
+              }
               /* use the measured time delta, get battery voltage from WPILib */
               updateSimState(deltaTime, RobotController.getBatteryVoltage());
             });
