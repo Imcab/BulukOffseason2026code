@@ -8,7 +8,7 @@ con la colisión del robot de MARS. No se despliega al robot.
 ## Uso
 
 ```powershell
-.\tools\bump3d\run_bench.ps1                          # ventana 3D; dale Play
+.\tools\bump3d\run_bench.ps1                          # ventana 3D; arranca sola y se repite
 .\tools\bump3d\run_bench.ps1 -Headless -Seconds 12    # solo la tabla
 .\tools\bump3d\run_bench.ps1 -Speeds 1,2 -LiftsCm 0,4 -Directions diamante_intake,intake_atras
 ```
