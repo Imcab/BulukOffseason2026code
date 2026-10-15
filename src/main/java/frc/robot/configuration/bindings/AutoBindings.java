@@ -1,6 +1,8 @@
 package frc.robot.configuration.bindings;
 
 
+import java.util.function.DoubleSupplier;
+
 import com.pathplanner.lib.auto.NamedCommands;
 import com.pathplanner.lib.commands.PathPlannerAuto;
 import com.stzteam.mars.models.containers.Binding;
@@ -16,6 +18,9 @@ import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
 import frc.robot.modules.individuals.intake.IntakeSpark.intakeMODE;
+import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.swerve.HubAlign;
+import frc.robot.modules.swerve.HubShotSpot;
 import frc.robot.requests.FlywheelsRequestFactory;
 import frc.robot.requests.IndexerRequestFactory;
 import frc.robot.requests.IntakeRequestFactory;
@@ -36,22 +41,35 @@ public class AutoBindings implements Binding {
     private final Flywheels shooter;
     private final Flywheels intakFlywheels;
     private final Indexer indexer;
+    private final CommandSwerveDrivetrain drivetrain;
+    private final DoubleSupplier secondsSinceVision;
  
-    private AutoBindings(Intake intake, Flywheels shooter, Indexer indexer, Flywheels intakFlywheels) {
+    private AutoBindings(Intake intake,
+        Flywheels shooter,
+        Indexer indexer,
+        Flywheels intakFlywheels,
+        CommandSwerveDrivetrain drivetrain,
+        DoubleSupplier secondsSinceVision) {
         this.intake = intake;
         this.shooter = shooter;
         this.indexer = indexer;
         this.intakFlywheels = intakFlywheels;
+        this.drivetrain = drivetrain;
+        this.secondsSinceVision = secondsSinceVision;
   }
 
-   public static AutoBindings create(
-      Intake intake, Flywheels shooter, Indexer indexer, Flywheels intakFlywheels) {
-        return new AutoBindings(intake, shooter, indexer, intakFlywheels);
+   public static AutoBindings create( 
+    Intake intake,
+    Flywheels shooter,
+    Indexer indexer,
+    Flywheels intakFlywheels,
+    CommandSwerveDrivetrain drivetrain,
+    DoubleSupplier secondsSinceVision) {
+        return new AutoBindings( intake, shooter, indexer, intakFlywheels, drivetrain, secondsSinceVision);
   }
 
      private void registerAutoCommands() {
-        // A del operator: bajar el intake
-    NamedCommands.registerCommand(
+   NamedCommands.registerCommand(
         "Intake_down",
         intake
             .setControl(
@@ -102,6 +120,27 @@ public class AutoBindings implements Binding {
                         .onlyWhile(
                             () -> shooter.isAtRPM(shooterWheelsConstants.kShootRPM, 400))))
             .withTimeout(4));
+ 
+    // Alinear a la posicion de tiro del hub (mismos HubAlign que el driver). El comando termina
+    // solo (ajuste fino con timeout propio); el withTimeout es un seguro por si el pathfinding se
+    // atora.
+    // D-pad izquierda del driver
+    NamedCommands.registerCommand(
+        "Alinear_izquierda",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.IZQUIERDA_30)
+            .withTimeout(6));
+ 
+    // Posicion centrada (la de default en el selector del driver, boton B)
+    NamedCommands.registerCommand(
+        "Alinear_centro",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.CENTRO)
+            .withTimeout(6));
+ 
+    // D-pad derecha del driver
+    NamedCommands.registerCommand(
+        "Alinear_derecha",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.DERECHA_30)
+            .withTimeout(6));
   }
      
 
@@ -127,6 +166,7 @@ public class AutoBindings implements Binding {
     chooser.addOption("Shoot Left", shootLeft);
     chooser.addOption("Shoot Middle", shootMiddle);
     chooser.addOption("Shoot Right", shootRight);
+    
     
 
     SmartDashboard.putData("AutoSelector", chooser);
