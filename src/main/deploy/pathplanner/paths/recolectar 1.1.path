@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.821755555555557,
-        "y": 7.406577777777777
+        "x": 8.658159771754635,
+        "y": 7.340827389443652
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.802266666666666,
-        "y": 5.457688888888888
+        "x": 8.638670882865744,
+        "y": 5.3919385005547635
       },
       "isLocked": false,
       "linkedName": "Cruce"
     },
     {
       "anchor": {
-        "x": 7.821755555555557,
-        "y": 4.89251111111111
+        "x": 8.737733333333333,
+        "y": 4.736599999999999
       },
       "prevControl": {
-        "x": 7.812111111111113,
-        "y": 6.305455555555556
+        "x": 8.72808888888889,
+        "y": 6.1495444444444445
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": "Recolectar Mitad"
+      "linkedName": "regreso_rojo"
     }
   ],
   "rotationTargets": [],
@@ -33,8 +33,8 @@
   "pointTowardsZones": [],
   "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 2.0,
-    "maxAcceleration": 2.0,
+    "maxVelocity": 4.5,
+    "maxAcceleration": 4.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
@@ -42,10 +42,10 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 90.46864901487044
+    "rotation": 92.81555668421129
   },
   "reversed": false,
-  "folder": "Azul pos1",
+  "folder": null,
   "idealStartingState": {
     "velocity": 0,
     "rotation": 91.04755112762736

@@ -1,0 +1,31 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "back_center_3"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}

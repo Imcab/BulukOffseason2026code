@@ -8,6 +8,7 @@ import com.stzteam.mars.models.containers.Binding;
 import com.stzteam.forgemini.io.NetworkIO;
 import com.stzteam.mars.operator.ControllerOI;
 
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.configuration.KeyManager;
@@ -139,10 +140,10 @@ private final double DEADBAND = 0.1;
 //mover las wheels del intake
     triggers.left().whileTrue(
         intakFlywheels.setControl(
-            () -> FlywheelsRequestFactory.moveVoltage().withVolts(-8)
+            () -> FlywheelsRequestFactory.setRPM().toRPM(-5000)
         )
     );
-    
+
 
     // ----- Disparo -----
 
@@ -151,7 +152,7 @@ private final double DEADBAND = 0.1;
     // D-pad arriba: shooter a kShootRPM; cuando llega, el indexer libera las piezas.
     // Una vez que empieza a liberar sigue alimentando aunque las RPM bajen por el disparo.
     // Al soltar, ambos regresan a idle.
-    dpad.up()
+    triggers.right()
         .whileTrue(
             Commands.parallel(
     shooter.setControl(() ->
@@ -190,6 +191,24 @@ private final double DEADBAND = 0.1;
                 )
             )
         );
+
+        dpad.right()
+            .whileTrue(
+                Commands.parallel(
+                    indexer.setControl(
+                        () -> IndexerRequestFactory.setRollers().withRPM(5500)
+                    )
+                )
+            );
+
+        dpad.left()
+            .whileTrue(
+                Commands.parallel(
+                    indexer.setControl(
+                        () -> IndexerRequestFactory.setIndex().withRPM(5500)
+                    )
+                )
+            );
 
   }
 

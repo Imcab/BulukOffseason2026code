@@ -16,12 +16,12 @@
     },
     {
       "anchor": {
-        "x": 7.821755555555557,
-        "y": 7.406577777777777
+        "x": 8.658159771754635,
+        "y": 7.340827389443652
       },
       "prevControl": {
-        "x": 6.738729579424618,
-        "y": 6.257415096783879
+        "x": 7.575133795623696,
+        "y": 6.191664708449754
       },
       "nextControl": null,
       "isLocked": false,
@@ -33,8 +33,8 @@
   "pointTowardsZones": [],
   "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 2.0,
-    "maxAcceleration": 2.0,
+    "maxVelocity": 4.5,
+    "maxAcceleration": 4.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
     "nominalVoltage": 12.0,
@@ -45,7 +45,7 @@
     "rotation": 91.04755112762736
   },
   "reversed": false,
-  "folder": "Azul pos1",
+  "folder": null,
   "idealStartingState": {
     "velocity": 0,
     "rotation": 0.0

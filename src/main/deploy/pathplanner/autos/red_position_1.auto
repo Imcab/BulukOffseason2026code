@@ -1,0 +1,55 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Back_rojo"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Cruzar_rojo1.1"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "recolectar 1.1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_eat"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "return_rojo"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
