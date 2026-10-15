@@ -7,19 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "p1"
+            "pathName": "shoot_right_r"
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "p2"
+            "name": "Flywheels_shoot"
           }
         }
       ]
     }
   },
-  "resetOdom": false,
+  "resetOdom": true,
   "folder": null,
   "choreoAuto": false
 }

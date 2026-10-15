@@ -7,13 +7,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "start 1.2"
+            "pathName": "start 1.1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_vomit"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "cruce 1.2"
+            "pathName": "cruce 1.1"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
           }
         },
         {
@@ -23,15 +35,21 @@
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "regresar 1.0"
+            "name": "Intake_eat"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "pos lanzar 1.2"
+            "pathName": "turn2shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
           }
         }
       ]

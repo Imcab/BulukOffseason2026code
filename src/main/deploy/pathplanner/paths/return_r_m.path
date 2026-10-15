@@ -3,29 +3,29 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 1.6583452211126959,
-        "y": 6.4092439372325245
+        "x": 2.327364418723367,
+        "y": 3.7687335043242483
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.658345221112696,
-        "y": 6.4092439372325245
+        "x": 2.6565880103107378,
+        "y": 2.992109827110324
       },
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "end_shoot"
     },
     {
       "anchor": {
-        "x": 1.7747931526390865,
-        "y": 3.950898716119829
+        "x": 2.9814251886232936,
+        "y": 2.3608663639877774
       },
       "prevControl": {
-        "x": 2.1370756062767478,
-        "y": 2.96756062767475
+        "x": 2.8551595925734587,
+        "y": 2.641130267956946
       },
       "nextControl": null,
       "isLocked": false,
-      "linkedName": null
+      "linkedName": "right_cross_init"
     }
   ],
   "rotationTargets": [],
@@ -33,7 +33,7 @@
   "pointTowardsZones": [],
   "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 3.0,
+    "maxVelocity": 2.0,
     "maxAcceleration": 2.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": -90.0
+    "rotation": 0.0
   },
   "reversed": false,
-  "folder": null,
+  "folder": "Azul pos1",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 0.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }

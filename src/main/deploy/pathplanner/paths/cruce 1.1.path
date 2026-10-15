@@ -8,8 +8,8 @@
       },
       "prevControl": null,
       "nextControl": {
-        "x": 3.9239777777777785,
-        "y": 5.360244444444444
+        "x": 3.923977437033502,
+        "y": 5.360233950652014
       },
       "isLocked": false,
       "linkedName": "start PR1 frente"
@@ -67,13 +67,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 92.54480437981307
+    "rotation": 91.04755112762736
   },
   "reversed": false,
   "folder": "Azul pos1",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -47.04540848888724
+    "rotation": -39.71820789998837
   },
   "useDefaultConstraints": false
 }

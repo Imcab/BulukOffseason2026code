@@ -5,33 +5,45 @@
     "data": {
       "commands": [
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "start 1.1"
+            "name": "Intake_vomit"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "cruce 1.1"
+            "pathName": "direct_cross_right"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_eat"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "recolectar 1.0"
+            "pathName": "recolect_r-f"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "regresar 1.0"
+            "pathName": "pass_rightp"
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "pos lanzar 1.1"
+            "name": "Flywheels_shoot"
           }
         }
       ]

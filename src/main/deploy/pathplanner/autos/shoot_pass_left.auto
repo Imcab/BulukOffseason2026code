@@ -11,27 +11,45 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "cruce 1.1"
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "recolectar 1.1"
+            "name": "Intake_down"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "regresar 1.2"
+            "pathName": "recolectar 1.0"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_eat"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "pos lanzar 1.1"
+            "pathName": "turn2shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
           }
         }
       ]

@@ -11,9 +11,21 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "cruce 1.2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_eat"
           }
         },
         {
@@ -32,6 +44,12 @@
           "type": "path",
           "data": {
             "pathName": "pos lanzar 1.2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Flywheels_shoot"
           }
         }
       ]

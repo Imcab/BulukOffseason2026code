@@ -3,25 +3,25 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 1.852425106990014,
-        "y": 3.9767760342368046
+        "x": 3.4619594731957024,
+        "y": 5.436402573248353
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.852425106990014,
-        "y": 3.9767760342368046
+        "x": 3.29379517017963,
+        "y": 5.207307859989938
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 1.852425106990014,
-        "y": 6.292796005706134
+        "x": 3.080427684976597,
+        "y": 5.797060196616433
       },
       "prevControl": {
-        "x": 2.214707560627675,
-        "y": 5.309457917261056
+        "x": 3.1766889324457077,
+        "y": 6.027784647500361
       },
       "nextControl": null,
       "isLocked": false,
@@ -33,7 +33,7 @@
   "pointTowardsZones": [],
   "eventMarkers": [],
   "globalConstraints": {
-    "maxVelocity": 3.0,
+    "maxVelocity": 2.0,
     "maxAcceleration": 2.0,
     "maxAngularVelocity": 540.0,
     "maxAngularAcceleration": 720.0,
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 107.59242456218158
+    "rotation": -44.655301358588986
   },
   "reversed": false,
-  "folder": null,
+  "folder": "Azul pos1",
   "idealStartingState": {
     "velocity": 0,
     "rotation": 0.0
   },
-  "useDefaultConstraints": false
+  "useDefaultConstraints": true
 }
