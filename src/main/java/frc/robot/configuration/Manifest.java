@@ -31,7 +31,7 @@ import frc.robot.modules.swerve.SwerveTelemetry;
 
 public class Manifest {
 
-    public static final RunMode CURRENT_MODE = RunMode.REAL;
+    public static final RunMode CURRENT_MODE = RunMode.SIM;
 
     static{Environment.setMode(CURRENT_MODE);}
 
