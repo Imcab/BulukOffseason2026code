@@ -3,16 +3,16 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 7.763288888888889,
-        "y": 7.231177777777777
+        "x": 7.868901569186875,
+        "y": 4.727218259629101
       },
       "prevControl": null,
       "nextControl": {
-        "x": 7.665844444444444,
-        "y": 4.950977777777777
+        "x": 6.691483594864478,
+        "y": 5.852881597717547
       },
       "isLocked": false,
-      "linkedName": "regreso"
+      "linkedName": "Recolectar"
     },
     {
       "anchor": {
@@ -30,8 +30,12 @@
   ],
   "rotationTargets": [
     {
-      "waypointRelativePos": 0.5,
-      "rotationDegrees": 148.62477496102966
+      "waypointRelativePos": 0.2665245202558638,
+      "rotationDegrees": 178.15942305366497
+    },
+    {
+      "waypointRelativePos": 0.7185501066098116,
+      "rotationDegrees": -179.66309587737578
     }
   ],
   "constraintZones": [],
@@ -53,7 +57,7 @@
   "folder": null,
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -142.6960517220166
+    "rotation": 90.46864901487044
   },
   "useDefaultConstraints": true
 }

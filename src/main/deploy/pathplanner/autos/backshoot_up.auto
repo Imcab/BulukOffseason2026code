@@ -7,7 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "shoot_right_r"
+            "pathName": "Blue_backshoot_up"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Alinear_izquierda"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
           }
         },
         {

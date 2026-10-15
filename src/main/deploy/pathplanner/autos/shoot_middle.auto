@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Back_rojo 3"
+            "pathName": "start 1.4"
           }
         },
         {
@@ -19,13 +19,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Cruzar_rojo3"
+            "pathName": "cruce 1.3"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "recolectar_rojo2"
+            "pathName": "recolectar 2.0"
           }
         },
         {
@@ -37,7 +37,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "return_rojo2"
+            "pathName": "pos lanzar 2"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Alinear_centro"
           }
         },
         {

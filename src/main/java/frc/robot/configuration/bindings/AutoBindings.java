@@ -24,31 +24,13 @@ public class AutoBindings implements Binding {
 
     public SendableChooser<Command> chooser = new SendableChooser<>();
 
-        public PathPlannerAuto blueAuto131;
-        public PathPlannerAuto blueAuto142;
-        
-        public PathPlannerAuto blueBackShootLeft;
-        public PathPlannerAuto blueBackShootMiddle;
-        public PathPlannerAuto blueBackShootRightM;
-        public PathPlannerAuto blueBackShootRightR;
-        
-        public PathPlannerAuto blueShootPassLeft;
-        public PathPlannerAuto blueShootMPassShortRight;
-        public PathPlannerAuto blueShootRPassShortRight;
-        
-        public PathPlannerAuto blueVomitPassLongLeft;
-        public PathPlannerAuto blueVomitPassShortLeft;
-        public PathPlannerAuto blueVomitPassShortRight;
-        
-        // ----- Red -----
-        public PathPlannerAuto redPosition1;
-        public PathPlannerAuto redPosition2;
-        public PathPlannerAuto redPosition31;
-        public PathPlannerAuto redPosition32;
-        public PathPlannerAuto redPosition33;
-        public PathPlannerAuto redPosition34;
- 
-        public PathPlannerAuto redShootMPassShortLeft;
+    public PathPlannerAuto backshootCenter;
+    public PathPlannerAuto backshootDown;
+    public PathPlannerAuto backshootUp;
+    
+    public PathPlannerAuto shootLeft;
+    public PathPlannerAuto shootMiddle;
+    public PathPlannerAuto shootRight;
  
     private final Intake intake;
     private final Flywheels shooter;
@@ -128,60 +110,23 @@ public class AutoBindings implements Binding {
     public void bind() {
     registerAutoCommands();
 
-    blueAuto131 = new PathPlannerAuto("Blue_Auto 1.3.1");
-    blueAuto142 = new PathPlannerAuto("Blue_Auto 1.4.2");
+     backshootCenter = new PathPlannerAuto("backshoot_center");
+    backshootDown = new PathPlannerAuto("backshoot_down");
+    backshootUp = new PathPlannerAuto("backshoot_up");
  
-    blueBackShootLeft = new PathPlannerAuto("blue_back_shoot_left");
-    blueBackShootMiddle = new PathPlannerAuto("blue_back_shoot_middle");
-    blueBackShootRightM = new PathPlannerAuto("blue_back_shoot_right_m");
-    blueBackShootRightR = new PathPlannerAuto("blue_back_shoot_right_r");
+    shootLeft = new PathPlannerAuto("shoot_left");
+    shootMiddle = new PathPlannerAuto("shoot_middle");
+    shootRight = new PathPlannerAuto("shoot_right");
  
-    blueShootPassLeft = new PathPlannerAuto("blue_shoot_pass_left");
-    blueShootMPassShortRight = new PathPlannerAuto("blue_shootm_pass_short_right");
-    // OJO: el archivo se llama "righbt" (typo). Si lo renombras en PathPlanner, cambialo aqui.
-    blueShootRPassShortRight = new PathPlannerAuto("blue_shootr_pass_short_righbt");
- 
-    blueVomitPassLongLeft = new PathPlannerAuto("blue_vomit_pass_long_left");
-    blueVomitPassShortLeft = new PathPlannerAuto("blue_vomit_pass_short_left");
-    blueVomitPassShortRight = new PathPlannerAuto("blue_vomit_pass_short_right");
- 
-    redPosition1 = new PathPlannerAuto("red_position_1");
-    redPosition2 = new PathPlannerAuto("red_position_2");
-    redPosition31 = new PathPlannerAuto("red_position_3.1");
-    redPosition32 = new PathPlannerAuto("red_position_3.2");
-    redPosition33 = new PathPlannerAuto("red_position_3.3");
-    redPosition34 = new PathPlannerAuto("red_position_3.4");
- 
-    redShootMPassShortLeft = new PathPlannerAuto("shootm_pass_short_left_red");
- 
-    // Opcion por defecto: no correr nada (evita que arranque un auto sin querer)
     chooser.setDefaultOption("Ninguno", Commands.none());
  
-    chooser.addOption("Blue Auto 1.3.1", blueAuto131);
-    chooser.addOption("Blue Auto 1.4.2", blueAuto142);
+    chooser.addOption("Backshoot Center", backshootCenter);
+    chooser.addOption("Backshoot Down", backshootDown);
+    chooser.addOption("Backshoot Up", backshootUp);
  
-    chooser.addOption("Blue Back Shoot Left", blueBackShootLeft);
-    chooser.addOption("Blue Back Shoot Middle", blueBackShootMiddle);
-    chooser.addOption("Blue Back Shoot Right (M)", blueBackShootRightM);
-    chooser.addOption("Blue Back Shoot Right (R)", blueBackShootRightR);
- 
-    chooser.addOption("Blue Shoot Pass Left", blueShootPassLeft);
-    chooser.addOption("Blue ShootM Pass Short Right", blueShootMPassShortRight);
-    chooser.addOption("Blue ShootR Pass Short Right", blueShootRPassShortRight);
- 
-    chooser.addOption("Blue Vomit Pass Long Left", blueVomitPassLongLeft);
-    chooser.addOption("Blue Vomit Pass Short Left", blueVomitPassShortLeft);
-    chooser.addOption("Blue Vomit Pass Short Right", blueVomitPassShortRight);
- 
-    chooser.addOption("Red Position 1", redPosition1);
-    chooser.addOption("Red Position 2", redPosition2);
-    chooser.addOption("Red Position 3.1", redPosition31);
-    chooser.addOption("Red Position 3.2", redPosition32);
-    chooser.addOption("Red Position 3.3", redPosition33);
-    chooser.addOption("Red Position 3.4", redPosition34);
- 
-    chooser.addOption("Red ShootM Pass Short Left", redShootMPassShortLeft);
-
+    chooser.addOption("Shoot Left", shootLeft);
+    chooser.addOption("Shoot Middle", shootMiddle);
+    chooser.addOption("Shoot Right", shootRight);
     
 
     SmartDashboard.putData("AutoSelector", chooser);
