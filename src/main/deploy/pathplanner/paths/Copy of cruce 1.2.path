@@ -1,0 +1,59 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.042781740370898,
+        "y": 2.566462196861627
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 6.937318116975749,
+        "y": 2.954621968616264
+      },
+      "isLocked": false,
+      "linkedName": "start azul 2"
+    },
+    {
+      "anchor": {
+        "x": 7.778330955777461,
+        "y": 0.7291726105563499
+      },
+      "prevControl": {
+        "x": 6.070427960057063,
+        "y": 0.7809272467902997
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "cruce_azul"
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.36247334754797206,
+      "rotationDegrees": 180.0
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 2.0,
+    "maxAcceleration": 2.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -90.0
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 180.0
+  },
+  "useDefaultConstraints": false
+}

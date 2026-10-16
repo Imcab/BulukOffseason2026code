@@ -1,0 +1,330 @@
+<title>Replay de PathPlanner</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg-app: #ececee; --bg-page: #ffffff; --bg-panel: #f7f7f8; --bg-toolbar: #ececee;
+  --text: #1c1c1f; --text-muted: #68686f;
+  --border-light: #e8e8ea; --border: #d4d4d8; --border-dark: #b8b8bf;
+  --accent: #4a5fd9; --accent-bg: rgba(74,95,217,0.12);
+  --ok: #1f7a1f; --abort: #a1690a; --bad: #c21c1c;
+  --bg: #ffffff; --carpet: #ffffff; --grid: #e8e8ea; --line: #d4d4d8; --tape: #8a8a92;
+  --fg: #1c1c1f; --muted: #68686f;
+  --font-body: "Segoe UI", Arial, sans-serif;
+  --font-mono: Consolas, "Cascadia Mono", "Courier New", monospace;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg-page); color: var(--text); }
+body { margin: 0; font-family: var(--font-body); font-size: 12px; line-height: 1.4; }
+.toolbar { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 4px 8px; background: var(--bg-toolbar); border-bottom: 1px solid var(--border-dark); }
+.group { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.sep { width: 1px; align-self: stretch; margin: 2px 4px; background: var(--border-dark); }
+button, select { font: inherit; color: var(--text); background: var(--bg-panel); border: 1px solid var(--border); border-radius: 2px; padding: 3px 9px; cursor: default; }
+button:hover, select:hover { background: var(--border-light); border-color: var(--border-dark); }
+button[aria-pressed="true"].tog { background: var(--accent-bg); border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+.chip { display: inline-flex; gap: 6px; align-items: baseline; }
+.chip .kp { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+#play { min-width: 76px; }
+.time { font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; min-width: 84px; color: var(--text-muted); }
+input[type="range"] { accent-color: var(--accent); width: min(300px, 40vw); }
+.stage { position: relative; background: var(--bg-page); padding: 8px; min-width: 0; }
+canvas { display: block; width: 100%; }
+#hud { margin-bottom: 8px; }
+#exp { font-weight: 600; }
+#status { font-size: 11px; color: var(--text-muted); }
+.tip { position: absolute; pointer-events: none; z-index: 4; background: var(--bg-panel); border: 1px solid var(--border-dark); padding: 6px 8px; font-size: 12px; min-width: 200px; box-shadow: 2px 2px 6px rgba(0,0,0,0.15); }
+.tip h3 { margin: 0 0 3px; font-size: 12px; font-weight: 600; }
+.tip dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 1px 12px; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.tip dt { color: var(--text-muted); } .tip dd { margin: 0; text-align: right; }
+.state-ok { color: var(--ok); } .state-aborto { color: var(--abort); } .state-inestable { color: var(--bad); }
+</style>
+
+<div class="toolbar" role="toolbar" aria-label="Controles">
+  <div class="group" id="scenarios" aria-label="Escenario"></div>
+  <span class="sep"></span>
+  <div class="group">
+    <button id="v-grid" class="tog" aria-pressed="true">Un entorno por robot</button>
+    <button id="v-over" class="tog" aria-pressed="false">Superpuestos</button>
+  </div>
+  <span class="sep"></span>
+  <div class="group">
+    <button id="play" aria-pressed="false">Pausa</button>
+    <select id="speed" aria-label="Velocidad">
+      <option value="0.25">0.25x</option><option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option><option value="2">2x</option>
+    </select>
+    <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Tiempo">
+    <span class="time" id="time">t = 0.00 s</span>
+  </div>
+  <span class="sep"></span>
+  <div class="group">
+    <button id="exp">Export video</button>
+    <span id="status"></span>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+    <canvas id="hud" aria-label="Statistics"></canvas>
+    <canvas id="cv" aria-label="Animacion de los robots"></canvas>
+    <div class="tip" id="tip" hidden></div>
+  </div>
+
+
+<script>
+const DATA = /*__REPLAY_DATA__*/null;
+(function () {
+  const css = getComputedStyle(document.documentElement);
+  const C = n => css.getPropertyValue(n).trim();
+  const COL = { bg: C("--bg"), carpet: C("--carpet"), grid: C("--grid"), line: C("--line"), tape: C("--tape"),
+    fg: C("--fg"), muted: C("--muted"), ok: C("--ok"), aborto: C("--abort"), inestable: C("--bad") };
+  const STATE_NAME = { ok: "Siguio el path", aborto: "Aborto", inestable: "Inestable" };
+  const TRAJ_NAME = {
+    mantener_pose: "Mantener pose (prueba de estabilidad)", recta_4m: "Recta 4 m", recta_6m_giro180: "Recta 6 m + giro 180°",
+    curva_s_lateral: "Curva en S lateral", diagonal_giro90: "Diagonal + giro 90°", lateral_2m: "Strafe 2 m",
+    corto_1m: "Recta corta 1 m", arco_90_giro90: "Arco 90° + giro 90°", giro_sitio_180: "Giro en el lugar 180°" };
+  const D = DATA, N = D.robots.length, FDT = D.frame_dt;
+  const tEnd = Math.max(...D.trajectories.map(t => t.total_time)) + D.settle_s;
+  let sc = 0, view = "grid", t = 1.2, speed = 1, playing = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let layout = [], hover = -1;
+
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d"), tip = $("tip"), stage = $("stage");
+  // Escenarios
+  const scBox = $("scenarios");
+  D.scenarios.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.className = "chip tog"; b.id = "sc-" + i; b.setAttribute("aria-pressed", String(i === sc));
+    b.innerHTML = `<span></span><span class="kp"></span>`;
+    b.children[0].textContent = s.label; b.children[1].textContent = `(${s.kp_t}, ${s.kp_r})`;
+    b.onclick = () => { sc = i; scBox.querySelectorAll("button").forEach((x, j) => x.setAttribute("aria-pressed", String(j === i))); draw(); };
+    scBox.appendChild(b);
+  });
+  $("v-grid").onclick = () => setView("grid");
+  $("v-over").onclick = () => setView("over");
+  function setView(v) { view = v; $("v-grid").setAttribute("aria-pressed", String(v === "grid")); $("v-over").setAttribute("aria-pressed", String(v === "over")); resize(); }
+  $("play").onclick = () => { playing = !playing; syncPlay(); };
+  function syncPlay() { $("play").textContent = playing ? "Pausa" : "Reproducir"; $("play").setAttribute("aria-pressed", String(!playing)); }
+  $("speed").onchange = e => { speed = parseFloat(e.target.value); };
+  $("scrub").oninput = e => { t = e.target.value / 1000 * tEnd; draw(); };
+
+
+  // ---- HUD (Isaac Gym style stats, big black text) ----
+  const hudc = $("hud"), hctx = hudc.getContext("2d");
+  function statsNow() {
+    const runs = D.scenarios[sc].runs, n = k => runs.filter(r => r.state === k).length;
+    const fin = runs.filter(r => r.state === "ok").map(r => r.final_cm).sort((a, b) => a - b);
+    const p95 = fin.length ? fin[Math.min(fin.length - 1, Math.floor(0.95 * fin.length))] : null;
+    const mean = fin.length ? fin.reduce((a, b) => a + b, 0) / fin.length : null;
+    const mx = runs.reduce((a, r) => a + (r.max_cm || 0), 0) / runs.length;
+    const f = v => v === null ? "--" : v.toFixed(1) + " cm";
+    return { sc: D.scenarios[sc], ok: n("ok"), ab: n("aborto"), bad: n("inestable"), p95: f(p95), mean: f(mean), mx: mx.toFixed(1) + " cm" };
+  }
+  function hudH(wl) { return wl < 900 ? 190 : 124; }
+  function drawHud(c, x, y, w, k) {   // w in device px, k = scale (device px per css px)
+    const wl = w / k, H = hudH(wl), S = statsNow(), mono = C("--font-mono");
+    c.save(); c.translate(x, y); c.scale(k, k);
+    c.fillStyle = "#fff"; c.fillRect(0, 0, wl, H);
+    c.fillStyle = "#000"; c.textBaseline = "top";
+    c.font = `700 52px ${mono}`; c.fillText(`ATTEMPTS: ${N}`, 8, 4);
+    c.font = `700 20px ${mono}`;
+    c.fillText(`SCENARIO: ${S.sc.label}   kP = (${S.sc.kp_t}, ${S.sc.kp_r})`, 8, 66);
+    c.fillText(`SIM TIME: ${t.toFixed(2)} s`, 8, 92);
+    const nar = wl < 900, X = nar ? 8 : Math.max(520, wl * 0.42), Y = nar ? 124 : 4;
+    c.font = `700 30px ${mono}`;
+    c.fillText(`SUCCESS: ${S.ok}   ABORTED: ${S.ab}   UNSTABLE: ${S.bad}`, X, Y);
+    c.font = `700 20px ${mono}`;
+    c.fillText(`FINAL ERROR p95: ${S.p95}   MEAN: ${S.mean}`, X, Y + (nar ? 36 : 44));
+    c.fillText(`MEAN MAX ERROR: ${S.mx}`, X, Y + (nar ? 60 : 70));
+    c.fillStyle = "#b8b8bf"; c.fillRect(0, H - 2, wl, 2);
+    c.restore();
+  }
+  function paintHud() {
+    const dpr = window.devicePixelRatio || 1, W = stage.clientWidth - 16, H = hudH(W);
+    if (hudc.width !== Math.round(W * dpr)) { hudc.width = Math.round(W * dpr); hudc.height = Math.round(H * dpr); hudc.style.height = H + "px"; }
+    hctx.setTransform(1, 0, 0, 1, 0, 0); drawHud(hctx, 0, 0, hudc.width, dpr);
+  }
+
+  // ---- Video export ----
+  const rc = document.createElement("canvas"); rc.width = 1920; rc.height = 1080; const rx = rc.getContext("2d");
+  let recording = false;
+  function compose() {
+    const k = 1.5, hh = hudH(rc.width / k) * k, dpr = window.devicePixelRatio || 1;
+    rx.fillStyle = "#fff"; rx.fillRect(0, 0, rc.width, rc.height);
+    drawHud(rx, 0, 0, rc.width, k);
+    const cw = cv.width / dpr, ch = cv.height / dpr, s = Math.min(rc.width / cw, (rc.height - hh - 8) / ch), w = cw * s, h = ch * s;
+    rx.drawImage(cv, (rc.width - w) / 2, hh + 8, w, h);
+  }
+  async function exportVideo() {
+    if (recording) return;
+    const st = $("status"), btn = $("exp");
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (!dl || !window.MediaRecorder) { st.textContent = "Video export is not available in this view."; return; }
+    const types = [["video/mp4;codecs=avc1", "mp4"], ["video/webm;codecs=vp9", "webm"], ["video/webm", "webm"]];
+    const pick = types.find(x => MediaRecorder.isTypeSupported(x[0]));
+    if (!pick) { st.textContent = "This browser cannot record video."; return; }
+    recording = true; btn.disabled = true;
+    const was = { playing, t }; playing = false; syncPlay();
+    const chunks = [], rec = new MediaRecorder(rc.captureStream(30), { mimeType: pick[0], videoBitsPerSecond: 8e6 });
+    rec.ondataavailable = e => { e.data.size && chunks.push(e.data); };
+    const done = new Promise(r => rec.onstop = r);
+    t = 0; draw(); compose(); rec.start();
+    const t0 = performance.now();
+    await new Promise(res => { (function step() {
+      t = (performance.now() - t0) / 1000 * speed;
+      if (t >= tEnd) { t = tEnd; draw(); compose(); return res(); }
+      draw(); compose(); st.textContent = `Recording ${Math.round(t / tEnd * 100)}%`; requestAnimationFrame(step);
+    })(); });
+    await new Promise(r => setTimeout(r, 150)); rec.stop(); await done;
+    recording = false; btn.disabled = false; t = was.t; playing = was.playing; syncPlay(); draw();
+    try {
+      await dl.save({ filename: `pathplanner_${D.scenarios[sc].label}_${view}.${pick[1]}`.replace(/\s+/g, "_"), data: new Blob(chunks, { type: pick[0].split(";")[0] }) });
+      st.textContent = "Saved.";
+    } catch (e) { st.textContent = e && e.code === "declined" ? "" : "Could not save the video."; }
+  }
+  $("exp").onclick = exportVideo;
+
+  // Layout del lienzo: secciones por trayectoria.
+  function resize() {
+    const W = stage.clientWidth - 16, dpr = window.devicePixelRatio || 1;
+    paintHud(); layout = []; let y = 0;
+    const groups = D.trajectories.map((tr, j) => ({ j, ids: D.robots.map((r, i) => r.traj === j ? i : -1).filter(i => i >= 0) }));
+    if (view === "grid") {
+      const tile = Math.max(66, Math.min(118, Math.floor(W / Math.max(4, Math.floor(W / 92)))));
+      const cols = Math.max(1, Math.floor(W / tile));
+      for (const g of groups) {
+        g.ids.forEach((id, k) => layout.push({ kind: "tile", id, j: g.j, x: (k % cols) * tile, y: y + Math.floor(k / cols) * tile, w: tile - 4, h: tile - 4 }));
+        y += Math.ceil(g.ids.length / cols) * tile + 8;
+      }
+    } else {
+      const cols = W > 1000 ? 3 : W > 640 ? 2 : 1, pw = Math.floor(W / cols), ph = Math.round(pw * 0.62);
+      groups.forEach((g, k) => {
+        const x = (k % cols) * pw, yy = y + Math.floor(k / cols) * (ph + 8);
+        layout.push({ kind: "panel", j: g.j, ids: g.ids, x, y: yy, w: pw - 8, h: ph });
+      });
+      y += Math.ceil(groups.length / cols) * (ph + 8);
+    }
+    cv.style.height = y + "px"; cv.width = Math.round(W * dpr); cv.height = Math.round(y * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function frame(run, tt) {  // pose interpolada
+    const f = tt / FDT, n = run.x.length, i = Math.min(n - 1, Math.floor(f)), k = Math.min(n - 1, i + 1), a = Math.min(1, f - i);
+    let dth = run.th[k] - run.th[i]; dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+    return [run.x[i] + a * (run.x[k] - run.x[i]), run.y[i] + a * (run.y[k] - run.y[i]), run.th[i] + a * dth];
+  }
+  function target(tr, tt) {
+    const f = Math.min(tt, tr.total_time) / FDT, n = tr.x.length, i = Math.min(n - 1, Math.floor(f)), k = Math.min(n - 1, i + 1), a = Math.min(1, f - i);
+    let dth = tr.theta[k] - tr.theta[i]; dth = Math.atan2(Math.sin(dth), Math.cos(dth));
+    return [tr.x[i] + a * (tr.x[k] - tr.x[i]), tr.y[i] + a * (tr.y[k] - tr.y[i]), tr.theta[i] + a * dth];
+  }
+  function viewport(tr, r) {  // escala metros -> pixeles para encuadrar la trayectoria
+    const m = 0.75, b = tr.bounds, cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2;
+    const sw = Math.max(b[2] - b[0] + 2 * m, 3.0), sh = Math.max(b[3] - b[1] + 2 * m, 3.0);
+    const s = Math.min(r.w / sw, r.h / sh);
+    return { s, X: x => r.x + r.w / 2 + (x - cx) * s, Y: y => r.y + r.h / 2 - (y - cy) * s };
+  }
+  function robot(vp, p, color, alpha, ghost, outline) {
+    const h = D.bumper_m / 2 * vp.s, x = vp.X(p[0]), y = vp.Y(p[1]);
+    ctx.save(); ctx.translate(x, y); ctx.rotate(-p[2]); ctx.globalAlpha = alpha;
+    if (ghost) { ctx.setLineDash([3, 3]); ctx.strokeStyle = COL.tape; ctx.lineWidth = 1; ctx.strokeRect(-h, -h, 2 * h, 2 * h); }
+    else if (outline) {
+      ctx.fillStyle = color; ctx.globalAlpha = alpha * 0.18; ctx.fillRect(-h, -h, 2 * h, 2 * h);
+      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.strokeRect(-h, -h, 2 * h, 2 * h);
+      ctx.beginPath(); ctx.moveTo(h * 0.2, 0); ctx.lineTo(h, 0); ctx.stroke();
+    } else {
+      ctx.fillStyle = color; ctx.fillRect(-h, -h, 2 * h, 2 * h);
+      ctx.fillStyle = COL.bg; ctx.beginPath(); ctx.moveTo(h, 0); ctx.lineTo(h * 0.25, -h * 0.55); ctx.lineTo(h * 0.25, h * 0.55); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function field(r, tr, vp) {
+    ctx.fillStyle = COL.carpet; ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    if (vp.s > 18) {  // rejilla de 1 m
+      ctx.strokeStyle = COL.grid; ctx.lineWidth = 1; ctx.beginPath();
+      for (let gx = Math.floor((r.x - vp.X(0)) / vp.s); vp.X(gx) < r.x + r.w; gx++) { ctx.moveTo(Math.round(vp.X(gx)) + 0.5, r.y); ctx.lineTo(Math.round(vp.X(gx)) + 0.5, r.y + r.h); }
+      for (let gy = Math.floor((vp.Y(0) - r.y - r.h) / vp.s); vp.Y(gy) > r.y; gy++) { ctx.moveTo(r.x, Math.round(vp.Y(gy)) + 0.5); ctx.lineTo(r.x + r.w, Math.round(vp.Y(gy)) + 0.5); }
+      ctx.stroke();
+    }
+    ctx.strokeStyle = COL.tape; ctx.globalAlpha = 0.55; ctx.lineWidth = Math.max(1, vp.s * 0.04); ctx.beginPath();
+    tr.x.forEach((x, i) => i ? ctx.lineTo(vp.X(x), vp.Y(tr.y[i])) : ctx.moveTo(vp.X(x), vp.Y(tr.y[i]))); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  function trail(vp, run, color, alpha) {
+    const i1 = Math.min(run.x.length - 1, Math.floor(t / FDT)), i0 = Math.max(0, i1 - Math.round(1.2 / FDT));
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let i = i0; i <= i1; i++) i === i0 ? ctx.moveTo(vp.X(run.x[i]), vp.Y(run.y[i])) : ctx.lineTo(vp.X(run.x[i]), vp.Y(run.y[i]));
+    ctx.stroke(); ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    const W = cv.width / (window.devicePixelRatio || 1), H = cv.height / (window.devicePixelRatio || 1);
+    ctx.clearRect(0, 0, W, H);
+    const runs = D.scenarios[sc].runs;
+    for (const L of layout) {
+      if (L.kind === "tile") {
+        const tr = D.trajectories[L.j], run = runs[L.id], vp = viewport(tr, L), col = COL[run.state];
+        field(L, tr, vp);
+        ctx.save(); ctx.beginPath(); ctx.rect(L.x, L.y, L.w, L.h); ctx.clip();
+        robot(vp, target(tr, t), null, 0.9, true);
+        trail(vp, run, col, 0.5);
+        robot(vp, frame(run, t), col, 1, false);
+        ctx.restore();
+        ctx.strokeStyle = L.id === hover ? COL.fg : (run.state === "ok" ? COL.line : col);
+        ctx.lineWidth = L.id === hover || run.state !== "ok" ? 2 : 1; ctx.strokeRect(L.x + 0.5, L.y + 0.5, L.w - 1, L.h - 1);
+      } else if (L.kind === "panel") {
+        const tr = D.trajectories[L.j], vp = viewport(tr, L);
+        field(L, tr, vp);
+        ctx.save(); ctx.beginPath(); ctx.rect(L.x, L.y, L.w, L.h); ctx.clip();
+        for (const id of L.ids) trail(vp, runs[id], COL[runs[id].state], 0.25);
+        for (const id of L.ids) robot(vp, frame(runs[id], t), COL[runs[id].state], id === hover ? 1 : 0.8, false, id !== hover);
+        robot(vp, target(tr, t), null, 1, true);
+        ctx.restore();
+      }
+    }
+    paintHud(); $("time").textContent = `t = ${t.toFixed(2)} s`;
+    $("scrub").value = Math.round(t / tEnd * 1000);
+  }
+
+  // Detalle al pasar el mouse
+  stage.addEventListener("mousemove", e => {
+    const rc = cv.getBoundingClientRect(), mx = e.clientX - rc.left, my = e.clientY - rc.top;
+    let found = -1;
+    for (const L of layout) {
+      if (L.kind === "tile" && mx >= L.x && mx <= L.x + L.w && my >= L.y && my <= L.y + L.h) { found = L.id; break; }
+      if (L.kind === "panel" && mx >= L.x && mx <= L.x + L.w && my >= L.y && my <= L.y + L.h) {
+        const vp = viewport(D.trajectories[L.j], L); let best = 1e9;
+        for (const id of L.ids) { const p = frame(D.scenarios[sc].runs[id], t), d = Math.hypot(vp.X(p[0]) - mx, vp.Y(p[1]) - my); if (d < best && d < 24) { best = d; found = id; } }
+        break;
+      }
+    }
+    hover = found; if (!playing) draw();
+    if (found < 0) { tip.hidden = true; return; }
+    const r = D.robots[found], run = D.scenarios[sc].runs[found];
+    tip.innerHTML = `<h3></h3><dl></dl>`;
+    tip.firstChild.textContent = `Robot ${found + 1} · `; const st = document.createElement("span");
+    st.className = "state-" + run.state; st.textContent = STATE_NAME[run.state]; tip.firstChild.appendChild(st);
+    const rows = [["Trayectoria", TRAJ_NAME[D.trajectories[r.traj].name] || ""], ["Latencia", r.latency_ms + " ms"], ["COF", r.cof],
+      ["Velocidad real", r.speed_pct + " %"], ["MOI", r.moi + " kg·m²"], ["Altura CM", r.cg_h + " m"],
+      ["Error inicial", `${r.init_cm} cm / ${r.init_deg}°`], ["Error maximo", run.max_cm + " cm"],
+      ["Error final", `${run.final_cm} cm / ${run.final_deg}°`], ["Derrape", run.slip_pct + " % del path"]];
+    for (const [k, v] of rows) { const dt = document.createElement("dt"), dd = document.createElement("dd"); dt.textContent = k; dd.textContent = v; tip.lastChild.append(dt, dd); }
+    tip.hidden = false;
+    const sr = stage.getBoundingClientRect(); let x = e.clientX - sr.left + 14, y = e.clientY - sr.top + 14;
+    if (x + 240 > sr.width) x -= 260; tip.style.left = x + "px"; tip.style.top = y + "px";
+  });
+  stage.addEventListener("mouseleave", () => { hover = -1; tip.hidden = true; if (!playing) draw(); });
+
+  let last = null;
+  function tick(ts) {
+    if (last !== null && playing) { t += (ts - last) / 1000 * speed; if (t > tEnd) t = 0; draw(); }
+    last = ts; requestAnimationFrame(tick);
+  }
+  window.addEventListener("resize", resize);
+  const h = location.hash.replace("#", "");
+  if (h === "superpuestos") setView("over");
+  const m = /^esc(\d+)$/.exec(h); if (m && D.scenarios[+m[1]]) document.getElementById("sc-" + m[1]).click();
+  syncPlay(); resize(); requestAnimationFrame(tick);
+})();
+</script>

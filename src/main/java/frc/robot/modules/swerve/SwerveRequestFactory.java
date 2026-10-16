@@ -57,9 +57,12 @@ public class SwerveRequestFactory {
         .withDriveRequestType(SwerveModule.DriveRequestType.OpenLoopVoltage);
   }
 
-  // Objeto para aplicar velocidades desde PathPlanner
+  // Objeto para aplicar velocidades desde PathPlanner.
+  // Velocity: el Talon cierra el lazo de velocidad de cada rueda (kS/kV/kP de driveGains), asi
+  // la bateria baja o la friccion no hacen que el robot se atrase en el path. Los kP de
+  // SwerveConstants.Path*PID estan ajustados para este modo (tools/pid_sweep).
   public static SwerveRequest.ApplyRobotSpeeds pathPlannerRequest() {
-    return new SwerveRequest.ApplyRobotSpeeds();
+    return new SwerveRequest.ApplyRobotSpeeds().withDriveRequestType(DriveRequestType.Velocity);
   }
 
   public static SwerveRequest.SysIdSwerveTranslation translationCharacterization() {

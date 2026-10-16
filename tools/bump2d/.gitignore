@@ -1,0 +1,4 @@
+__pycache__/
+*.stl
+*.html
+!core/viewer_template.html

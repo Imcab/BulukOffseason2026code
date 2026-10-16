@@ -8,6 +8,7 @@ import com.stzteam.mars.models.containers.Binding;
 import com.stzteam.forgemini.io.NetworkIO;
 import com.stzteam.mars.operator.ControllerOI;
 
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.configuration.KeyManager;
@@ -81,19 +82,19 @@ private final double DEADBAND = 0.1;
     Trigger leftStickXTrigger = new Trigger(() -> Math.abs(leftStick.x().getAsDouble()) > DEADBAND);
     Trigger leftStickYTrigger = new Trigger(() -> Math.abs(leftStick.y().getAsDouble()) > DEADBAND);
 
-   buttons
-        .right()
-        .whileTrue(
-            intake.setControl(
-                () -> IntakeRequestFactory.moveVoltage().withVolts(12)
-            ));
+//    buttons
+//         .right()
+//         .whileTrue(
+//             intake.setControl(
+//                 () -> IntakeRequestFactory.moveVoltage().withVolts(12)
+//             ));
           
-               buttons
-        .left()
-        .whileTrue(
-            intake.setControl(
-                () -> IntakeRequestFactory.moveVoltage().withVolts(-12)
-            ));
+//                buttons
+//         .left()
+//         .whileTrue(
+//             intake.setControl(
+//                 () -> IntakeRequestFactory.moveVoltage().withVolts(-12)
+//             ));
             
 
     // X: resetear el encoder a 0 en la posicion actual
@@ -118,9 +119,6 @@ private final double DEADBAND = 0.1;
                     IntakeRequestFactory.setAngle().withAngle(60).withMode(intakeMODE.kDOWN)));
 
 
-    // B: voltaje positivo de prueba / RB: voltaje negativo de prueba
-    //buttons.right().whileTrue(dumper.voltageCommand(1));
-    //bumpers.right().whileTrue(intake.voltageCommand(-IntakeConstants.kTestVolts));
 
     // ----- Indexer (mientras se mantenga presionado, al soltar regresa a idle) -----
 
@@ -137,41 +135,24 @@ private final double DEADBAND = 0.1;
     NetworkIO.set(KeyManager.SHOOTER_KEY, TEST_VOLTS_KEY, shooterWheelsConstants.kTestVolts);
     NetworkIO.set(KeyManager.SHOOTER_KEY, TEST_RPM_KEY, shooterWheelsConstants.kTestRPM);
 
-    // LT: voltaje fijo (para medir kS y kV)
-    triggers
-        .left()
-        .whileTrue(
-            shooter.setControl(
-                () ->
-                    FlywheelsRequestFactory.moveVoltage()
-                        .withVolts(
-                            () ->
-                                NetworkIO.get(
-                                    KeyManager.SHOOTER_KEY,
-                                    TEST_VOLTS_KEY,
-                                    shooterWheelsConstants.kTestVolts))));
+   
   
-
-    dpad.right().whileTrue(
+//mover las wheels del intake
+    triggers.left().whileTrue(
         intakFlywheels.setControl(
-            () -> FlywheelsRequestFactory.moveVoltage().withVolts(-8)
+            () -> FlywheelsRequestFactory.setRPM().toRPM(-5000)
         )
     );
-    
-  
-    // dpad.right().whileTrue(
-    //     dumper.setControl(
-    //         () -> DumperRequestFactory.moveVoltage().withVolts(8)
-    //     )
-    // );
+
+
     // ----- Disparo -----
 
-    dpad.down().whileTrue(new DumperTestCommand(shooter.getActor().getMotor(), shooter));
+    //dpad.down().whileTrue(new DumperTestCommand(shooter.getActor().getMotor(), shooter));
 
     // D-pad arriba: shooter a kShootRPM; cuando llega, el indexer libera las piezas.
     // Una vez que empieza a liberar sigue alimentando aunque las RPM bajen por el disparo.
     // Al soltar, ambos regresan a idle.
-    dpad.up()
+    triggers.right()
         .whileTrue(
             Commands.parallel(
     shooter.setControl(() ->
@@ -210,6 +191,24 @@ private final double DEADBAND = 0.1;
                 )
             )
         );
+
+        dpad.right()
+            .whileTrue(
+                Commands.parallel(
+                    indexer.setControl(
+                        () -> IndexerRequestFactory.setRollers().withRPM(5500)
+                    )
+                )
+            );
+
+        dpad.left()
+            .whileTrue(
+                Commands.parallel(
+                    indexer.setControl(
+                        () -> IndexerRequestFactory.setIndex().withRPM(5500)
+                    )
+                )
+            );
 
   }
 

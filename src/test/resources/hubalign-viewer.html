@@ -1,0 +1,309 @@
+<title>Recorridos de HubAlign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: herramienta de revision. Lista de recorridos a la izquierda, campo 2026 a la derecha con
+   reproduccion, y la linea de tiempo del comando debajo. En telefono se apila. */
+:root {
+  --bg: #f4f5f2;
+  --panel: #ffffff;
+  --ink: #15181a;
+  --ink-2: #545b5f;
+  --line: #d9ddd6;
+  --field: #e7ebe3;
+  --field-line: #cfd6cb;
+  --obstacle: #9aa595;
+  --accent: #0e7c66;
+  --accent-soft: #d3ece5;
+  --blue: #2563c9;
+  --red: #c8372d;
+  --truth: #15181a;
+  --ok: #1b7f3b;
+  --fail: #b42318;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --panel: #191d20; --ink: #e8ece9; --ink-2: #9ba5a1; --line: #2c3337;
+    --field: #1f2528; --field-line: #2c3438; --obstacle: #4a5550; --accent: #34c39f; --accent-soft: #173a31;
+    --blue: #5b93f0; --red: #f06a5d; --truth: #e8ece9; --ok: #47c26e; --fail: #f2645a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --panel: #191d20; --ink: #e8ece9; --ink-2: #9ba5a1; --line: #2c3337;
+  --field: #1f2528; --field-line: #2c3438; --obstacle: #4a5550; --accent: #34c39f; --accent-soft: #173a31;
+  --blue: #5b93f0; --red: #f06a5d; --truth: #e8ece9; --ok: #47c26e; --fail: #f2645a; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1500px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 16px; }
+header { display: grid; gap: 4px; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+h1 { margin: 0; font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { margin: 0; color: var(--ink-2); max-width: 80ch; }
+.layout { display: grid; grid-template-columns: minmax(260px, 330px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.runs { display: grid; gap: 8px; min-width: 0; }
+.run { text-align: left; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; gap: 6px; }
+.run:hover { border-color: var(--ink-2); }
+.run[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.run:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.run .top { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
+.run .name { font-weight: 600; }
+.badge { font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+.badge.ok { color: var(--ok); border: 1px solid var(--ok); }
+.badge.fail { color: var(--fail); border: 1px solid var(--fail); }
+.metrics { display: flex; flex-wrap: wrap; gap: 4px 12px; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }
+.stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+button, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+#play { min-width: 92px; font-weight: 600; }
+input[type="range"] { accent-color: var(--accent); flex: 1 1 200px; min-width: 120px; }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 84px; }
+canvas { width: 100%; display: block; border-radius: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+.legend i.box { width: 12px; height: 12px; border: none; border-radius: 2px; }
+.detail { display: grid; gap: 8px; }
+.now { font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); overflow-wrap: anywhere; }
+.note { margin: 0; color: var(--ink-2); max-width: 90ch; }
+ol.events { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 2px; font-family: var(--font-mono); font-size: 12px; }
+ol.events li { display: grid; grid-template-columns: 64px 1fr; gap: 8px; padding: 3px 6px; border-radius: 4px; color: var(--ink-2); }
+ol.events li.active { background: var(--accent-soft); color: var(--ink); }
+.empty { color: var(--ink-2); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">HubAlign · pruebas en simulacion (WPILib + CTRE + Limelight simulada)</div>
+    <h1>Recorridos de HubAlign</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <div class="layout">
+    <nav class="runs" id="runs" aria-label="Recorridos"></nav>
+
+    <section class="stage" aria-label="Campo">
+      <div class="bar">
+        <button id="play" aria-pressed="false">Pausa</button>
+        <select id="speed" aria-label="Velocidad">
+          <option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option>
+        </select>
+        <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Tiempo">
+        <span class="time" id="time">0.00 s</span>
+        <button id="all" aria-pressed="false">Todos los recorridos</button>
+        <button id="zoom" aria-pressed="true">Acercar a la alianza</button>
+      </div>
+      <canvas id="cv" aria-label="Campo con el recorrido"></canvas>
+      <div class="legend">
+        <span><i style="border-color:var(--accent)"></i>recorrido (pose del robot)</span>
+        <span><i style="border-color:var(--truth);border-top-style:dashed"></i>pose real (cuando difiere de lo que cree el robot)</span>
+        <span><i class="box" style="background:var(--obstacle);opacity:.45"></i>zona bloqueada para el pathfinder (navgrid, inflada)</span>
+        <span><i class="box" style="border:2px solid var(--accent);background:transparent"></i>posicion de tiro objetivo</span>
+      </div>
+      <div class="detail">
+        <div class="now" id="now"></div>
+        <p class="note" id="note"></p>
+        <ol class="events" id="events"></ol>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+(function () {
+  const $ = id => document.getElementById(id);
+  const css = () => getComputedStyle(document.documentElement);
+  const C = n => css().getPropertyValue(n).trim();
+  const F = DATA.field, RUNS = DATA.runs;
+  const HUB = { Blue: [18, 19, 20, 21, 24, 25, 26, 27], Red: [2, 3, 4, 5, 8, 9, 10, 11] };
+  const tagById = Object.fromEntries(F.tags.map(t => [t.id, t]));
+  let sel = 0, t = 0, playing = !matchMedia("(prefers-reduced-motion: reduce)").matches, speed = 1, all = false, zoom = true;
+
+  const passed = RUNS.filter(r => r.passed).length;
+  $("sub").textContent = `${RUNS.length} recorridos de las pruebas automaticas, ${passed} pasaron. Generado ${DATA.generated.replace("T", " ")}. ` +
+    `La simulacion es la de WPILib + CTRE (cinematica, sin derrape) con la Limelight simulada; en el robot real espera unos cm mas de error.`;
+
+  // Lista de recorridos
+  RUNS.forEach((r, i) => {
+    const b = document.createElement("button");
+    b.className = "run"; b.id = "run-" + i;
+    const ally = r.alliance === "Red" ? "--red" : "--blue";
+    b.innerHTML = `<div class="top"><span class="name"></span><span class="badge"></span></div><div class="metrics"></div>`;
+    b.querySelector(".name").textContent = r.name;
+    const badge = b.querySelector(".badge");
+    badge.className = "badge " + (r.passed ? "ok" : "fail");
+    badge.textContent = r.passed ? "✓ paso" : "✗ fallo";
+    const m = b.querySelector(".metrics");
+    const parts = [`<span><span class="dot" style="background:var(${ally})"></span>${r.alliance === "Red" ? "Rojo" : "Azul"}</span>`,
+      `<span>${r.spot}</span>`];
+    if (r.seconds > 0) parts.push(`<span>${r.seconds.toFixed(2)} s</span>`, `<span>${r.errCm.toFixed(1)} cm</span>`);
+    if (r.replans > 0) parts.push(`<span>${r.replans} replaneos</span>`);
+    m.innerHTML = parts.join("");
+    b.onclick = () => select(i);
+    $("runs").appendChild(b);
+  });
+
+  function select(i) {
+    sel = i; t = 0;
+    document.querySelectorAll(".run").forEach((b, j) => b.setAttribute("aria-pressed", String(j === i)));
+    const r = RUNS[i];
+    $("note").textContent = r.note || "";
+    const ol = $("events"); ol.innerHTML = "";
+    (r.events || []).forEach(e => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span></span><span></span>`;
+      li.children[0].textContent = e.t.toFixed(2) + " s"; li.children[1].textContent = e.text || "—";
+      ol.appendChild(li);
+    });
+    resize();
+  }
+
+  $("play").onclick = () => { playing = !playing; syncPlay(); };
+  function syncPlay() { $("play").textContent = playing ? "Pausa" : "Reproducir"; $("play").setAttribute("aria-pressed", String(!playing)); }
+  $("speed").onchange = e => speed = parseFloat(e.target.value);
+  $("scrub").oninput = e => { t = e.target.value / 1000 * duration(); draw(); };
+  $("all").onclick = () => { all = !all; $("all").setAttribute("aria-pressed", String(all)); draw(); };
+  $("zoom").onclick = () => { zoom = !zoom; $("zoom").setAttribute("aria-pressed", String(zoom)); resize(); };
+
+  function duration() { const e = RUNS[sel].est; return e.length ? e[e.length - 1][0] : 0; }
+  function at(series, tt) {  // pose interpolada [x, y, th]
+    if (!series || !series.length) return null;
+    let lo = 0, hi = series.length - 1;
+    if (tt <= series[0][0]) return series[0].slice(1);
+    if (tt >= series[hi][0]) return series[hi].slice(1);
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (series[m][0] <= tt) lo = m; else hi = m; }
+    const a = (tt - series[lo][0]) / (series[hi][0] - series[lo][0]);
+    const d = Math.atan2(Math.sin(series[hi][3] - series[lo][3]), Math.cos(series[hi][3] - series[lo][3]));
+    return [series[lo][1] + a * (series[hi][1] - series[lo][1]), series[lo][2] + a * (series[hi][2] - series[lo][2]), series[lo][3] + a * d];
+  }
+
+  // Vista: campo completo o la mitad de la alianza del recorrido
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  let view = { x0: 0, x1: F.length, y0: 0, y1: F.width }, W = 0, H = 0, s = 1;
+  function resize() {
+    const r = RUNS[sel];
+    if (zoom && !all) {
+      const half = F.length / 2;
+      view = r.alliance === "Red" ? { x0: half - 0.3, x1: F.length, y0: 0, y1: F.width } : { x0: 0, x1: half + 0.3, y0: 0, y1: F.width };
+    } else view = { x0: 0, x1: F.length, y0: 0, y1: F.width };
+    W = cv.clientWidth; s = W / (view.x1 - view.x0); H = (view.y1 - view.y0) * s;
+    const dpr = window.devicePixelRatio || 1;
+    cv.style.height = H + "px"; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+  const X = x => (x - view.x0) * s, Y = y => H - (y - view.y0) * s;
+
+  function poly(series, color, width, dash, upTo) {
+    if (!series || series.length < 2) return;
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []); ctx.beginPath();
+    let first = true;
+    for (const p of series) { if (upTo !== undefined && p[0] > upTo) break; first ? ctx.moveTo(X(p[1]), Y(p[2])) : ctx.lineTo(X(p[1]), Y(p[2])); first = false; }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  function robot(p, color, alpha, dashed) {
+    if (!p) return;
+    const h = F.bumper / 2 * s;
+    ctx.save(); ctx.translate(X(p[0]), Y(p[1])); ctx.rotate(-p[2]); ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dashed ? [5, 4] : []);
+    ctx.fillStyle = color; ctx.globalAlpha = alpha * 0.18; ctx.fillRect(-h, -h, 2 * h, 2 * h);
+    ctx.globalAlpha = alpha; ctx.strokeRect(-h, -h, 2 * h, 2 * h); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(h * 0.15, 0); ctx.lineTo(h, 0); ctx.stroke();  // frente del robot
+    ctx.restore();
+  }
+
+  function drawField() {
+    ctx.fillStyle = C("--field"); ctx.fillRect(0, 0, W, H);
+    // rejilla de 1 m
+    ctx.strokeStyle = C("--field-line"); ctx.lineWidth = 1; ctx.beginPath();
+    for (let x = Math.ceil(view.x0); x < view.x1; x++) { ctx.moveTo(Math.round(X(x)) + 0.5, 0); ctx.lineTo(Math.round(X(x)) + 0.5, H); }
+    for (let y = Math.ceil(view.y0); y < view.y1; y++) { ctx.moveTo(0, Math.round(Y(y)) + 0.5); ctx.lineTo(W, Math.round(Y(y)) + 0.5); }
+    ctx.stroke();
+    // navgrid
+    const ng = F.navgrid, n = ng.nodeSizeMeters;
+    ctx.fillStyle = C("--obstacle"); ctx.globalAlpha = 0.45;
+    ng.grid.forEach((row, r) => row.forEach((b, c) => { if (b) ctx.fillRect(X(c * n), Y((r + 1) * n), n * s + 0.5, n * s + 0.5); }));
+    ctx.globalAlpha = 1;
+    // hubs (rectangulo de sus tags)
+    for (const [ally, ids] of Object.entries(HUB)) {
+      const xs = ids.map(i => tagById[i].x), ys = ids.map(i => tagById[i].y);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      ctx.fillStyle = C(ally === "Red" ? "--red" : "--blue"); ctx.globalAlpha = 0.25;
+      ctx.fillRect(X(x0), Y(y1), (x1 - x0) * s, (y1 - y0) * s); ctx.globalAlpha = 1;
+      ctx.strokeStyle = C(ally === "Red" ? "--red" : "--blue"); ctx.lineWidth = 1.5; ctx.strokeRect(X(x0), Y(y1), (x1 - x0) * s, (y1 - y0) * s);
+    }
+    // tags
+    ctx.font = `10px ${C("--font-mono")}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (const tg of F.tags) {
+      const len = 0.18 * s, nx = Math.cos(tg.yaw), ny = Math.sin(tg.yaw);
+      ctx.strokeStyle = C("--ink"); ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(X(tg.x) - ny * len, Y(tg.y) - nx * len); ctx.lineTo(X(tg.x) + ny * len, Y(tg.y) + nx * len); ctx.stroke();
+      if ([25, 26, 9, 10].includes(tg.id)) { ctx.fillStyle = C("--ink-2"); ctx.fillText(String(tg.id), X(tg.x + nx * 0.28), Y(tg.y + ny * 0.28)); }
+    }
+  }
+
+  function draw() {
+    if (!W) return;
+    const r = RUNS[sel];
+    drawField();
+    const spots = F.spots[r.alliance] || [];
+    ctx.font = `11px ${C("--font-body")}`; ctx.textAlign = "left";
+    for (const sp of spots) {
+      ctx.fillStyle = C("--ink-2"); ctx.beginPath(); ctx.arc(X(sp.pose[0]), Y(sp.pose[1]), 3, 0, 2 * Math.PI); ctx.fill();
+      ctx.fillText(sp.label, X(sp.pose[0]) + 6, Y(sp.pose[1]) - 6);
+    }
+    if (all) {
+      RUNS.forEach((rr, i) => {
+        poly(rr.est, C(rr.alliance === "Red" ? "--red" : "--blue"), i === sel ? 3 : 1.5);
+        const last = rr.est[rr.est.length - 1]; if (last) robot(last.slice(1), C(rr.alliance === "Red" ? "--red" : "--blue"), 0.6);
+      });
+    } else {
+      // objetivo
+      const tg = r.target, h = F.bumper / 2 * s;
+      ctx.save(); ctx.translate(X(tg[0]), Y(tg[1])); ctx.rotate(-tg[2]); ctx.strokeStyle = C("--accent"); ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]); ctx.strokeRect(-h, -h, 2 * h, 2 * h); ctx.restore(); ctx.setLineDash([]);
+      // rutas completas tenues y la parte ya recorrida fuerte
+      poly(r.est, C("--accent"), 1.5, null); ctx.globalAlpha = 1;
+      poly(r.est, C("--accent"), 3, null, t);
+      if (r.truth) { poly(r.truth, C("--truth"), 2, [6, 4], t); robot(at(r.truth, t), C("--truth"), 1, true); }
+      robot(at(r.est, t), C("--accent"), 1, false);
+      // eventos de replaneo
+      for (const e of r.events || []) {
+        if (e.text && e.text.includes("replaneando") && e.t <= t) {
+          ctx.fillStyle = C("--accent"); ctx.save(); ctx.translate(X(e.x), Y(e.y)); ctx.rotate(Math.PI / 4); ctx.fillRect(-5, -5, 10, 10); ctx.restore();
+        }
+      }
+    }
+    // estado actual
+    const evs = r.events || []; let cur = null, idx = -1;
+    evs.forEach((e, i) => { if (e.t <= t) { cur = e; idx = i; } });
+    document.querySelectorAll("#events li").forEach((li, i) => li.classList.toggle("active", i === idx));
+    const p = at(r.est, t);
+    const err = p ? Math.hypot(p[0] - r.target[0], p[1] - r.target[1]) * 100 : 0;
+    $("now").textContent = all ? `${RUNS.length} recorridos superpuestos` :
+      `t = ${t.toFixed(2)} s · a ${err.toFixed(1)} cm del objetivo · estado: ${cur && cur.text ? cur.text : "—"}`;
+    $("time").textContent = t.toFixed(2) + " s";
+    $("scrub").value = duration() ? Math.round(t / duration() * 1000) : 0;
+  }
+
+  let last = null;
+  function tick(ts) {
+    if (last !== null && playing && !all) {
+      t += (ts - last) / 1000 * speed;
+      if (t > duration() + 0.8) t = 0;
+      draw();
+    }
+    last = ts; requestAnimationFrame(tick);
+  }
+  window.addEventListener("resize", resize);
+  if (!RUNS.length) { $("now").textContent = "No hay recorridos: corre ./gradlew test"; }
+  const h = parseInt(location.hash.replace("#", ""), 10);
+  syncPlay(); select(Number.isInteger(h) && RUNS[h] ? h : 0); t = Math.min(1.5, duration()); draw(); requestAnimationFrame(tick);
+})();
+</script>

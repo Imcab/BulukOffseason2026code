@@ -8,7 +8,13 @@ import com.stzteam.mars.models.containers.IRobotContainer;
 import com.stzteam.mars.operator.ControllerOI;
 import com.stzteam.mars.test.TestRoutine;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.commands.PathfindingCommand;
+
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.configuration.Manifest;
 import frc.robot.configuration.Manifest.ControlsBuilder;
@@ -21,6 +27,7 @@ import frc.robot.modules.individuals.flywheels.Flywheels;
 import frc.robot.modules.individuals.indexer.Indexer;
 import frc.robot.modules.individuals.intake.Intake;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.vision.Localization;
 import frc.tests.EmptyTest;
 
 public class RobotContainer implements IRobotContainer{
@@ -41,6 +48,12 @@ public class RobotContainer implements IRobotContainer{
 
   public final Dumper dumper;
 
+  // null si no hay drivetrain: sin odometria no hay a que fusionarle la vision
+  public final Localization localization;
+
+  // Selector de autos de PathPlanner (deploy/pathplanner/autos). null si AutoBuilder no se configuro.
+  private final SendableChooser<Command> autoChooser;
+
   public RobotContainer() {
 
     this.driver = ControlsBuilder.buildDriver();
@@ -60,10 +73,23 @@ public class RobotContainer implements IRobotContainer{
 
     this.dumper = Manifest.builDumper();
 
+    this.localization = drivetrain != null ? new Localization(drivetrain) : null;
+
     if (drivetrain != null) {
-      DriverBindings.create(drivetrain, driver).bind();
+      DriverBindings.create(drivetrain, driver, localization::secondsSinceLastVision).bind();
 
        ChassisTuningDashboard.publish(drivetrain);
+    }
+
+    // AutoBuilder se configura en el constructor del drivetrain (configurePathPlanner); si fallo
+    // (sin drivetrain o sin settings.json) no hay autos que construir.
+    if (AutoBuilder.isConfigured()) {
+      this.autoChooser = AutoBuilder.buildAutoChooser("testautho");
+      SmartDashboard.putData("Auto/Selector", autoChooser);
+      // Calienta el pathfinder (LocalADStar) para que el primer HubAlign no tarde en planear.
+      CommandScheduler.getInstance().schedule(PathfindingCommand.warmupCommand());
+    } else {
+      this.autoChooser = null;
     }
 
     OperatorBindings.create(operator, intake, shooter, indexer, dumper, intakFlywheels).bind();
@@ -73,7 +99,10 @@ public class RobotContainer implements IRobotContainer{
   public void updateNodes() {}
 
   public Command getAutonomousCommand() {
-    return Commands.print("No autonomous command configured");
+    if (autoChooser == null) {
+      return Commands.print("PathPlanner no esta configurado: no hay auto");
+    }
+    return autoChooser.getSelected();
   }
 
   @Override

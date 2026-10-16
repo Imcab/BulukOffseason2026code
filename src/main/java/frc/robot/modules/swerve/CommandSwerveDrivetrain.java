@@ -10,10 +10,11 @@ import com.ctre.phoenix6.swerve.SwerveDrivetrainConstants;
 import com.ctre.phoenix6.swerve.SwerveModuleConstants;
 import com.ctre.phoenix6.swerve.SwerveRequest;
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
+import com.stzteam.features.posefinder.ICommandSwerveDrivetrain;
+import com.stzteam.features.posefinder.PoseFinder;
 
 import com.stzteam.forgemini.io.NetworkIO;
 import edu.wpi.first.math.Matrix;
@@ -32,6 +33,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.configuration.KeyManager;
+import frc.robot.configuration.constants.swerve.SwerveConstants;
 import frc.robot.configuration.constants.swerve.TunerConstants.TunerSwerveDrivetrain;
 import frc.robot.utils.SysIdRoutineManager;
 import java.util.Optional;
@@ -45,10 +47,12 @@ import java.util.function.Supplier;
  * https://v6.docs.ctr-electronics.com/en/stable/docs/tuner/tuner-swerve/index.html
  */
 public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
-    implements Subsystem{
+    implements Subsystem, ICommandSwerveDrivetrain {
   private static final double kSimLoopPeriod = 0.004; // 4 ms
   private Notifier m_simNotifier = null;
   private double m_lastSimTime;
+  /* Fisica de Gazebo (MARS). null = simulacion normal de CTRE; ver MarsSimGlue.habilitado(). */
+  private MarsSimGlue m_marsGlue = null;
 
   /* Blue alliance sees forward as 0 degrees (toward red alliance wall) */
   private static final Rotation2d kBlueAlliancePerspectiveRotation = Rotation2d.kZero;
@@ -65,7 +69,8 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
   private PathConstraints pathConstraints =
       new PathConstraints(4.5, 4.0, Units.degreesToRadians(540), Units.degreesToRadians(720));
 
-  //private final PoseFinder finder;
+  // Pathfinding a poses del campo (feature PoseFinder de MARS, sobre AutoBuilder de PathPlanner).
+  private PoseFinder finder; // se crea en initialize(), comun a los tres constructores
 
   /**
    * Constructs a CTRE SwerveDrivetrain using the specified constants.
@@ -134,6 +139,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
   /** Shared setup for every constructor. */
   private void initialize() {
     if (Utils.isSimulation()) {
+      if (MarsSimGlue.habilitado()) {
+        m_marsGlue = new MarsSimGlue(this);
+      }
       startSimThread();
     }
 
@@ -144,7 +152,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
 
     NetworkIO.set(KeyManager.SWERVE_KEY, "SysID", m_sysIdRoutineToApply.toString());
 
-    //this.finder = new PoseFinder(this, pathConstraints);
+    this.finder = new PoseFinder(this, pathConstraints);
   }
 
   public void setSysIdRoutine(SysIdRoutine routine) {
@@ -165,9 +173,7 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
           // -----------------------------
 
           new PPHolonomicDriveController(
-              new PIDConstants(5.0, 0.0, 0.0), // PID de Traslación
-              new PIDConstants(5.0, 0.0, 0.0) // PID de Rotación
-              ),
+              SwerveConstants.PathTranslationPID, SwerveConstants.PathRotationPID),
           config,
           () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
           this);
@@ -253,9 +259,9 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
     setControl(SwerveRequestFactory.simpleDriveRequest().withVelocityY(speed));
   }
 
-  // public PoseFinder getPoseFinder() {
-  //   return finder;
-  // }
+  public PoseFinder getPoseFinder() {
+    return finder;
+  }
 
   private void startSimThread() {
     m_lastSimTime = Utils.getCurrentTimeSeconds();
@@ -268,6 +274,11 @@ public class CommandSwerveDrivetrain extends TunerSwerveDrivetrain
               double deltaTime = currentTime - m_lastSimTime;
               m_lastSimTime = currentTime;
 
+              if (m_marsGlue != null) {
+                /* Gazebo da los encoders; si MARS no esta corriendo, el glue llama a updateSimState */
+                m_marsGlue.update();
+                return;
+              }
               /* use the measured time delta, get battery voltage from WPILib */
               updateSimState(deltaTime, RobotController.getBatteryVoltage());
             });

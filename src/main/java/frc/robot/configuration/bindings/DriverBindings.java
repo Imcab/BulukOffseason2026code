@@ -10,7 +10,10 @@ import com.stzteam.mars.operator.ControllerOI;
 
 import frc.robot.configuration.constants.swerve.SwerveConstants;
 import frc.robot.modules.swerve.CommandSwerveDrivetrain;
+import frc.robot.modules.swerve.HubAlign;
+import frc.robot.modules.swerve.HubShotSpot;
 import frc.robot.modules.swerve.SwerveRequestFactory;
+import java.util.function.DoubleSupplier;
 
 public class DriverBindings implements Binding {
 
@@ -22,17 +25,27 @@ public class DriverBindings implements Binding {
 
   private final ControllerOI driver;
 
+  /* Segundos desde la ultima medicion de vision aceptada; null si no hay localizacion */
+  private final DoubleSupplier secondsSinceVision;
+
   /* Requests are created once and reused every loop instead of allocating new ones */
   private final SwerveRequest.FieldCentric driveRequest = SwerveRequestFactory.driveFieldCentric();
   private final SwerveRequest.SwerveDriveBrake brakeRequest = SwerveRequestFactory.brake();
 
-  private DriverBindings(CommandSwerveDrivetrain drivetrain, ControllerOI driver) {
+  private DriverBindings(
+      CommandSwerveDrivetrain drivetrain, ControllerOI driver, DoubleSupplier secondsSinceVision) {
     this.drivetrain = drivetrain;
     this.driver = driver;
+    this.secondsSinceVision = secondsSinceVision;
   }
 
   public static DriverBindings create(CommandSwerveDrivetrain drivetrain, ControllerOI driver) {
-    return new DriverBindings(drivetrain, driver);
+    return new DriverBindings(drivetrain, driver, null);
+  }
+
+  public static DriverBindings create(
+      CommandSwerveDrivetrain drivetrain, ControllerOI driver, DoubleSupplier secondsSinceVision) {
+    return new DriverBindings(drivetrain, driver, secondsSinceVision);
   }
 
   @Override
@@ -41,6 +54,7 @@ public class DriverBindings implements Binding {
     var driverRightStick = driver.getRightStick();
     var driverBumpers = driver.getBumpers();
     var driverButtons = driver.getActionButtons();
+    var driverDpad = driver.getDPadTriggers();
 
     /*
      * Field centric drive. The operator perspective (set in the drivetrain per alliance)
@@ -64,5 +78,24 @@ public class DriverBindings implements Binding {
     driverButtons.top().onTrue(drivetrain.runOnce(drivetrain::seedFieldCentric));
 
     driverButtons.bottom().whileTrue(drivetrain.applyRequest(() -> brakeRequest));
+
+    /*
+     * Alineado a la posicion de tiro frente al hub de la alianza (mantener presionado; al soltar se
+     * cancela y regresa el control manual). Todas las posiciones estan a la misma distancia del
+     * centro del hub, de espaldas a el; izquierda/derecha como las ve el driver.
+     *   B            -> la posicion elegida en el dashboard (HubAlign/Posicion, default Centro)
+     *   D-pad arriba -> la posicion mas cercana al robot
+     *   D-pad izq.   -> 30 grados a la izquierda
+     *   D-pad der.   -> 30 grados a la derecha
+     */
+    if (secondsSinceVision != null) {
+      var chooser = HubAlign.spotChooser();
+      driverButtons.right().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, chooser::getSelected));
+      driverDpad.up().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.MAS_CERCANA));
+      driverDpad.left().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.IZQUIERDA_30));
+      driverDpad.right().whileTrue(HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.DERECHA_30));
+      // Botones en el dashboard para probar sin control (y reubicar el robot en simulacion).
+      HubAlign.publishTestButtons(drivetrain, secondsSinceVision);
+    }
   }
 }

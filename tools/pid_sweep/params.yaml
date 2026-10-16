@@ -1,0 +1,157 @@
+# Parametros fisicos y de barrido para el sweep de PID de PathPlanner.
+# Robot: dumper STZ Robotics / MARS #3472. Unidades SI salvo donde el nombre diga otra cosa.
+# Cada dato lleva su fuente. "TODO" = valor supuesto o derivado; medir en el robot real.
+
+robot:
+  mass_kg: 57.0                    # pesado, real
+  extra_mass_kg: 0.0               # piezas de juego en autos (confirmado 0, 2026-10-12)
+  moi_yaw_kgm2: 7.0                # CAD 6.7 @ 51.6 kg escalado a 57 kg
+  cg_height_m: 0.20                # TODO supuesto (lo que sobresale la llanta)
+  cg_offset_m: [0.005, 0.042]      # respecto al centro de modulos (x adelante, y izquierda); reparto lateral ~57/43
+  module_half_spacing_m: 0.276225  # 10.875 in -> wheelbase = trackwidth = 0.55245 m
+  bumper_size_m: [0.9017, 0.9017]  # 35.5 in x 35.5 in con bumpers (solo informativo/visual)
+  wheel_radius_m: 0.0508           # 4 in OD Spike Grip
+  drive_gear_ratio: 5.2734375      # SDS MK5n R3
+
+drive_motor:                       # WPILib DCMotor.getKrakenX60Foc (wpimath 2026.2.1)
+  nominal_voltage: 12.0
+  stall_torque_nm: 9.37
+  stall_current_a: 483.0
+  free_current_a: 2.0
+  free_speed_rpm: 5800.0           # -> 5800/60/5.2734*2*pi*0.0508 = 5.85 m/s (= kSpeedAt12Volts)
+  # Friccion de Coulomb del modulo (rueda + engranes), expresada como volts equivalentes.
+  # Medido 2026-10-12 con DriveCharacterizationCommand (girar en el lugar): kS = 0.1295 V.
+  # El modelo ya incluye la friccion interna del motor (R * I_libre = 0.050 V), asi que aqui va
+  # el resto: 0.1295 - 0.0497 = 0.080 V.
+  static_friction_v: 0.080
+
+steer:
+  # TODO medir. X44 FOC libre 7368 rpm / 26.09 = 29.6 rad/s de modulo; se supone 70% bajo carga.
+  max_rate_rad_s: 20.0
+  time_constant_s: 0.015           # TODO supuesto: el PID de steer (kP 55) cierra rapido
+
+tire:
+  # Fuerza lateral de la llanta por angulo de deslizamiento (modelo lineal + circulo de friccion):
+  #   F_lat = -C_alpha * v_lat / max(|v|, v_reg),  con C_alpha = cornering_stiffness_per_load * N
+  # TODO: no hay dato del Spike Grip. 15/rad es un valor tipico de llanta de banda; el circulo de
+  # friccion domina cuando hay derrape, asi que el resultado es poco sensible (ver tests).
+  cornering_stiffness_per_load: 15.0   # 1/rad
+  low_speed_regularization_mps: 1.0    # evita dividir entre 0 a baja velocidad
+
+# Lo que el CODIGO del robot usa (TunerConstants / CTRE / PathPlanner). Puede no coincidir con la realidad.
+code:
+  speed_at_12v_mps: 5.85           # TunerConstants.kSpeedAt12Volts (teorico)
+  loop_period_s: 0.02              # periodo del robot (y de PathPlanner)
+  desaturate_wheel_speeds: true    # ApplyRobotSpeeds.DesaturateWheelSpeeds = true por default (Phoenix 6 26.3.0)
+  cosine_compensation: true        # TODO verificar: el modulo nativo de CTRE escala la velocidad por cos(error de angulo)
+  drive_kS: 0.1295                 # medido 2026-10-12 (DriveChar); antes 0.408 estimado
+  drive_kV: 0.1156                 # V/rps del rotor, medido 2026-10-12 (teorico 0.124)
+  drive_kP: 0.2                    # V por rps de error
+
+sim:
+  physics_dt_s: 0.002              # 10 subpasos por ciclo de 20 ms
+  battery_voltage: 12.0            # sin modelo de caida; el speed_factor la absorbe en parte
+  settle_time_s: 1.0               # tiempo extra simulado despues de que termina el path
+  gravity_mps2: 9.81
+
+# Variantes del lazo de modulo. Cada una se barre completa.
+# El robot usa velocity_limites_propuestos desde 2026-10-12 (PathPlanner en Velocity + 70/70 A).
+variants:
+  - name: actual_openloop
+    drive_mode: open_loop          # pathPlannerRequest() antes del 2026-10-12: OpenLoopVoltage
+    stator_limit_a: 120.0          # kSlipCurrent -> CTRE lo aplica como StatorCurrentLimit
+    supply_limit_a: null           # hoy no hay supply limit en el drive
+  - name: velocity
+    drive_mode: velocity           # si se cambia a DriveRequestType.Velocity (con kV corregido)
+    stator_limit_a: 120.0
+    supply_limit_a: null
+  - name: velocity_limites_propuestos
+    drive_mode: velocity
+    stator_limit_a: 70.0           # kSlipCurrent (aplicado 2026-10-12; = limite de traccion con COF 1.0)
+    supply_limit_a: 70.0           # supply del drive (aplicado; el lower limit 40 A tras 1 s no se modela)
+
+randomization:                     # uniforme en [min, max]
+  extra_mass_kg: [0.0, 0.0]        # sumado a mass_kg + extra_mass_kg
+  moi_yaw_kgm2: [6.6, 7.4]
+  cg_height_m: [0.19, 0.21]
+  cof: [0.9, 1.6]                  # TODO COF real del Spike Grip (placeholder de PathPlanner: 1.0)
+  # velocidad real / 5.85 m/s. Del kV medido sale 1.062 (6.21 m/s a 12 V, extrapolado desde
+  # <= 6 V sin carga); se deja hasta 10% menos por caida de bateria con carga.
+  speed_factor: [0.96, 1.07]
+  latency_s: [0.02, 0.06]          # retraso total medicion -> actuacion (TODO medir)
+  init_pos_offset_m: 0.15          # radio maximo del error inicial de pose
+  init_yaw_offset_deg: 5.0
+
+path_constraints:                  # constraints actuales de los paths
+  max_vel_mps: 4.5
+  max_acc_mps2: 4.0
+  max_ang_vel_deg_s: 540.0
+  max_ang_acc_deg_s2: 720.0
+
+sweep:
+  kp_translation: {start: 1.0, stop: 25.0, num: 25}
+  kp_rotation: {start: 1.0, stop: 25.0, num: 25}
+  samples_per_cell: 32             # robots aleatorizados por cada par (kP_t, kP_r); en CPU baja a 8
+  seed: 3472
+  trajectories: all                # o lista de nombres de trajectories/*.json
+
+stability:
+  # En los paths, "aborto" = el auto habria fallado (se reporta, NO fija el limite de kP:
+  # un atraso grande con kP bajo tambien aborta y eso no es inestabilidad).
+  abort_pos_err_m: 0.75
+  abort_yaw_err_deg: 45.0
+  # "Divergencia" = el lazo se fue (cuenta como inestable para el limite de kP).
+  divergence_pos_err_m: 1.5
+  divergence_yaw_err_deg: 90.0
+  # Prueba de estabilidad "mantener pose": trayectoria quieta, el robot arranca desplazado
+  # init_pos_offset_m / init_yaw_offset_deg (el maximo del rango, direccion aleatoria) y solo
+  # el PID corrige. Aqui cualquier oscilacion es del lazo, no del path.
+  hold_test_time_s: 2.5
+  osc_hysteresis_m: 0.02           # una "inversion" del error cuenta solo si se mueve mas que esto
+  osc_hysteresis_deg: 2.0
+  hold_max_reversals: 2            # 3+ inversiones (zeta < ~0.2) = mal amortiguado / inestable
+  # Nota: que el robot se quede corto (zona muerta por friccion con kP bajo) NO es inestabilidad;
+  # se reporta como error final de mantener_pose, no como bandera.
+  stopped_speed_mps: 0.05          # para medir el tiempo total (robot detenido)
+  stopped_omega_rad_s: 0.05
+
+recommendation:
+  fraction_of_limit: 0.65          # kP recomendado = 65% del limite robusto (peor caso)
+
+autotune:
+  # Busqueda automatica de (kP_t, kP_r) con el metodo de entropia cruzada (CEM) en escala log.
+  # Cada generacion: `population` candidatos x `robots_per_candidate` robots aleatorizados nuevos
+  # x todas las trayectorias. Un candidato es VALIDO solo si es estable con sus kP y tambien con
+  # kP / margin_fraction (asi queda <= 65% del limite de inestabilidad en todo el rango).
+  # Tamanos pensados para GPU (~7 s por generacion en una RTX 4060). En CPU usa --quick.
+  population: 48
+  robots_per_candidate: 192
+  generations: 20
+  elite_fraction: 0.25
+  init_kp: [5.0, 5.0]              # punto de partida (los valores actuales del codigo)
+  init_log_std: 0.7
+  min_log_std: 0.04
+  smoothing: 0.7                   # mezcla de la distribucion nueva con la anterior
+  bounds_kp: [0.5, 40.0]
+  margin_fraction: 0.65
+  seed: 3472
+  cost:
+    # Costo por corrida (metros): pos_rms + w_final * error_final + (lo mismo en heading * deg_to_m)
+    # + abort_penalty si aborta. Se optimiza el percentil `quantile` sobre robots y trayectorias.
+    quantile: 0.95
+    w_final: 1.0
+    deg_to_m: 0.01                 # 1 grado de heading pesa como 1 cm de posicion
+    abort_penalty_m: 1.0
+  validation:
+    robots: 16384                  # robots nuevos (otra semilla) para validar el resultado
+    finalists: 8                   # mejores candidatos de la busqueda que se re-evaluan juntos
+    finalist_robots: 2048
+    compare: [[5.0, 5.0], [10.0, 5.0]]   # codigo actual y autotune de Gazebo
+  # Escenarios FUERA del rango aleatorizado: solo se reportan (que tan rapido se degrada).
+  stress:
+    latencia_80ms: {latency_s: [0.08, 0.08]}
+    cof_0.7: {cof: [0.7, 0.7]}
+    velocidad_75pct: {speed_factor: [0.75, 0.75]}
+    masa_mas_8kg: {extra_mass_kg: [8.0, 8.0]}
+    cm_alto_0.30m: {cg_height_m: [0.30, 0.30]}
+    error_inicial_30cm: {init_pos_offset_m: 0.30, init_yaw_offset_deg: 10.0}

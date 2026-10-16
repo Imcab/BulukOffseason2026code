@@ -1,0 +1,54 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 3.5731777777777776,
+        "y": 5.76951111111111
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 3.07444842786241,
+        "y": 5.733887586117156
+      },
+      "isLocked": false,
+      "linkedName": null
+    },
+    {
+      "anchor": {
+        "x": 2.423333333333334,
+        "y": 5.408966666666666
+      },
+      "prevControl": {
+        "x": 2.813111111111111,
+        "y": 5.584366666666666
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": "start PR1 frente"
+    }
+  ],
+  "rotationTargets": [],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 3.0,
+    "maxAcceleration": 3.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -39.71820789998837
+  },
+  "reversed": false,
+  "folder": "Azul pos1",
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": 0.0
+  },
+  "useDefaultConstraints": false
+}

@@ -36,8 +36,14 @@ public class TunerConstants {
           .withStaticFeedforwardSign(StaticFeedforwardSignValue.UseClosedLoopSign);
   // When using closed-loop control, the drive motor uses the control
   // output type specified by SwerveModuleConstants.DriveMotorClosedLoopOutput
+  // Las ganancias del drive operan sobre rps del ROTOR (volts por rotacion/s del motor).
+  // kS y kV MEDIDOS el 2026-10-12 con DriveCharacterizationCommand (girando en el lugar):
+  //   kS = 0.1295 V, kV = 0.1156 V/rps.
+  // Teorico: kV = 12 / (5.85 / (2*pi*0.0508) * 5.2734375) = 0.124 V/rps; el medido es ~7% menor,
+  // o sea el robot llega a ~6.2 m/s a 12 V (sin carga). Se usan en DriveRequestType.Velocity
+  // (PathPlanner); el teleop en OpenLoopVoltage no los usa.
   private static final Slot0Configs driveGains =
-      new Slot0Configs().withKP(0.2).withKI(0).withKD(0).withKS(0.408).withKV(9.56055);
+      new Slot0Configs().withKP(0.2).withKI(0).withKD(0).withKS(0.1295).withKV(0.1156);
 
   // The closed-loop output type to use for the steer motors;
   // This affects the PID/FF gains for the steer motors
@@ -58,12 +64,23 @@ public class TunerConstants {
   private static final SteerFeedbackType kSteerFeedbackType = SteerFeedbackType.FusedCANcoder;
 
   // The stator current at which the wheels start to slip;
-  // This needs to be tuned to your individual robot
-  private static final Current kSlipCurrent = Amps.of(120);
+  // CTRE la aplica como StatorCurrentLimit del drive. Con 57 kg y COF 1.0 la llanta satura en
+  // ~70 A de stator (mu*m*g/4 * r / G / kT = 69.4 A; PathPlanner lo reporta como "Max Optimal
+  // Current Limit"). Mas corriente solo hace patinar la llanta. Si se mide un COF mayor, subir
+  // junto con wheelCOF y driveCurrentLimit en deploy/pathplanner/settings.json.
+  private static final Current kSlipCurrent = Amps.of(70);
 
   // Initial configs for the drive and steer motors and the azimuth encoder; these cannot be null.
   // Some configs will be overwritten; check the `with*InitialConfigs()` API documentation.
-  private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration();
+  // Supply limit del drive contra brownouts: 70 A en picos, 40 A si se sostiene mas de 1 s.
+  private static final TalonFXConfiguration driveInitialConfigs =
+      new TalonFXConfiguration()
+          .withCurrentLimits(
+              new CurrentLimitsConfigs()
+                  .withSupplyCurrentLimit(Amps.of(70))
+                  .withSupplyCurrentLowerLimit(Amps.of(40))
+                  .withSupplyCurrentLowerTime(Seconds.of(1.0))
+                  .withSupplyCurrentLimitEnable(true));
   private static final TalonFXConfiguration steerInitialConfigs =
       new TalonFXConfiguration()
           .withCurrentLimits(

@@ -1,0 +1,205 @@
+<title>Cruce del bump</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: herramienta de revision. Arriba los selectores (direccion, altura extra del chasis,
+   velocidad); al centro la vista lateral animada; abajo las metricas del escenario. */
+:root {
+  --bg: #f4f5f2; --panel: #ffffff; --ink: #15181a; --ink-2: #545b5f; --line: #d9ddd6;
+  --ground: #b9b2a3; --bump: #8c7f68; --robot: #2563c9; --robot-fill: #dbe6f8; --wheel: #15181a;
+  --hit: #d12f22; --ok: #1b7f3b; --warn: #a15c00; --accent: #0e7c66; --accent-soft: #d3ece5;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --panel: #191d20; --ink: #e8ece9; --ink-2: #9ba5a1; --line: #2c3337;
+    --ground: #5b564c; --bump: #8a7d66; --robot: #5b93f0; --robot-fill: #1c2a40; --wheel: #e8ece9;
+    --hit: #ff5a4c; --ok: #47c26e; --warn: #f0a640; --accent: #34c39f; --accent-soft: #173a31; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --panel: #191d20; --ink: #e8ece9; --ink-2: #9ba5a1; --line: #2c3337;
+  --ground: #5b564c; --bump: #8a7d66; --robot: #5b93f0; --robot-fill: #1c2a40; --wheel: #e8ece9;
+  --hit: #ff5a4c; --ok: #47c26e; --warn: #f0a640; --accent: #34c39f; --accent-soft: #173a31; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap { max-width: 1300px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 40px; display: grid; gap: 14px; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+h1 { margin: 2px 0 0; font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--ink-2); max-width: 85ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); min-width: 92px; }
+button, select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 7px; padding: 5px 10px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.res { font-size: 12px; margin-left: 6px; font-family: var(--font-mono); }
+#play { min-width: 92px; font-weight: 600; }
+input[type="range"] { accent-color: var(--accent); flex: 1 1 200px; min-width: 120px; }
+.time { font-family: var(--font-mono); font-variant-numeric: tabular-nums; min-width: 70px; }
+canvas { width: 100%; display: block; border-radius: 6px; }
+.verdict { font-weight: 600; font-size: 16px; }
+.verdict.ok { color: var(--ok); } .verdict.warn { color: var(--warn); } .verdict.bad { color: var(--hit); }
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.m { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; }
+.m .v { font-family: var(--font-mono); font-size: 18px; font-variant-numeric: tabular-nums; }
+.m .k { font-size: 12px; color: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--ink-2); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -2px; }
+.note { color: var(--ink-2); font-size: 13px; margin: 0; max-width: 95ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">STZ Robotics #3472 · modelo 2D del cruce (vista lateral)</div>
+    <h1>Cruce del bump</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <section class="panel" aria-label="Escenario">
+    <div class="row"><span class="label">Direccion</span><span class="row" id="dirs"></span></div>
+    <div class="row"><span class="label">Chasis</span><span class="row" id="lifts"></span></div>
+    <div class="row"><span class="label">Velocidad</span><span class="row" id="speeds"></span></div>
+  </section>
+
+  <section class="panel" aria-label="Vista lateral">
+    <div class="row">
+      <button id="play" aria-pressed="false">Pausa</button>
+      <select id="rate" aria-label="Velocidad de reproduccion">
+        <option value="0.25">0.25x</option><option value="0.5" selected>0.5x</option><option value="1">1x</option>
+      </select>
+      <input id="scrub" type="range" min="0" max="1000" value="0" aria-label="Tiempo">
+      <span class="time" id="time">0.00 s</span>
+    </div>
+    <canvas id="cv" aria-label="Robot cruzando el bump, visto de lado"></canvas>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--robot-fill);border:1px solid var(--robot)"></i>silueta del robot (CAD)</span>
+      <span><i class="sw" style="background:var(--wheel)"></i>ruedas (el numero = ruedas en ese eje)</span>
+      <span><i class="sw" style="background:var(--hit)"></i>parte del robot tocando el bump</span>
+      <span><i class="sw" style="background:var(--bump)"></i>bump (16.5 cm x 1.12 m)</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Resultado">
+    <div class="verdict" id="verdict"></div>
+    <div class="metrics" id="metrics"></div>
+    <p class="note" id="note"></p>
+  </section>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+(function () {
+  const $ = id => document.getElementById(id);
+  const C = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const D = DATA;
+  const DIR_LABEL = { intake_adelante: "Recto, intake adelante", intake_atras: "Recto, intake atras", de_lado: "De lado",
+    diamante_intake: "Diamante, esquina del intake", diamante_atras: "Diamante, otra esquina" };
+  const dirs = [...new Set(D.cases.map(c => c.dir))], lifts = [...new Set(D.cases.map(c => c.lift))], speeds = [...new Set(D.cases.map(c => c.v))];
+  let dir = dirs.includes("diamante_intake") ? "diamante_intake" : dirs[0], lift = lifts[0], speed = speeds.includes(1) ? 1 : speeds[0];
+  let t = 0, playing = !matchMedia("(prefers-reduced-motion: reduce)").matches, rate = 0.5;
+  $("sub").textContent = `Silueta y ruedas sacadas del CAD (${D.source}); bump del mundo de MARS. ${D.cases.length} escenarios simulados: ` +
+    `masa ${D.mass} kg, CM a ${D.cg} m, limite de stator ${D.stator} A. Elige como cruza y mira que parte toca.`;
+
+  const verdictOf = c => c.crossed ? (c.contact > 0 ? ["cruza con roce", "warn"] : ["cruza limpio", "ok"]) : (c.stuck ? ["se queda colgado", "bad"] : ["no cruza", "bad"]);
+  function chips(id, values, get, set, fmt, resultOf) {
+    const box = $(id); box.innerHTML = "";
+    values.forEach(v => {
+      const b = document.createElement("button");
+      b.setAttribute("aria-pressed", String(v === get()));
+      b.textContent = fmt(v);
+      if (resultOf) { const c = resultOf(v); if (c) { const s = document.createElement("span"); const [txt, cls] = verdictOf(c);
+        s.className = "res"; s.style.color = `var(--${cls === "ok" ? "ok" : cls === "warn" ? "warn" : "hit"})`; s.textContent = cls === "ok" ? "✓" : cls === "warn" ? "~" : "✗"; s.title = txt; b.appendChild(s); } }
+      b.onclick = () => { set(v); render(); };
+      box.appendChild(b);
+    });
+  }
+  const find = (d, l, v) => D.cases.find(c => c.dir === d && c.lift === l && c.v === v);
+  function render() {
+    chips("dirs", dirs, () => dir, v => dir = v, v => DIR_LABEL[v] || v);
+    chips("lifts", lifts, () => lift, v => lift = v, v => v ? `+${Math.round(v * 100)} cm` : "actual (CAD)");
+    chips("speeds", speeds, () => speed, v => speed = v, v => `${v} m/s`, v => find(dir, lift, v));
+    t = 0; showMetrics(); draw();
+  }
+  function cur() { return find(dir, lift, speed); }
+  function showMetrics() {
+    const c = cur(); const [txt, cls] = verdictOf(c);
+    $("verdict").className = "verdict " + cls; $("verdict").textContent = txt[0].toUpperCase() + txt.slice(1);
+    const items = [
+      [c.crossed ? c.time.toFixed(2) + " s" : "—", "tiempo de cruce"],
+      [c.contact.toFixed(2) + " s", "tiempo tocando el bump"],
+      [Math.round(c.force) + " N", "fuerza maxima del roce"],
+      [`${c.pmin.toFixed(1)}° / ${c.pmax.toFixed(1)}°`, "pitch min / max"],
+      [c.air.toFixed(2) + " s", "todas las ruedas en el aire"],
+      [(100 * c.odo).toFixed(0) + " cm", "error de odometria al salir"],
+    ];
+    $("metrics").innerHTML = "";
+    for (const [v, k] of items) { const d = document.createElement("div"); d.className = "m"; d.innerHTML = `<span class="v"></span><span class="k"></span>`;
+      d.children[0].textContent = v; d.children[1].textContent = k; $("metrics").appendChild(d); }
+    $("note").textContent = c.note || "";
+  }
+
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, s = 1, X0 = 0;
+  const VIEW = { x0: -0.2, x1: 3.4, z0: -0.08, z1: 0.95 };
+  function resize() {
+    W = cv.clientWidth; s = W / (VIEW.x1 - VIEW.x0); H = (VIEW.z1 - VIEW.z0) * s;
+    const dpr = window.devicePixelRatio || 1;
+    cv.style.height = H + "px"; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); draw();
+  }
+  const PX = x => (x - VIEW.x0) * s, PZ = z => H - (z - VIEW.z0) * s;
+  function frame(c, tt) {
+    const tr = c.trace, n = tr.t.length; let i = Math.min(n - 1, Math.max(0, Math.round(tt / D.dt)));
+    return { x: tr.x[i], z: tr.z[i], th: tr.th[i], N: tr.n[i], body: tr.b[i], bx: tr.bx[i] };
+  }
+  function draw() {
+    if (!W) return;
+    const c = cur(), prof = D.profiles[c.dir], f = frame(c, t);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = C("--bg"); ctx.fillRect(0, 0, W, H);
+    // piso y bump
+    const b = D.bump;
+    ctx.fillStyle = C("--ground"); ctx.fillRect(0, PZ(0), W, H - PZ(0));
+    ctx.fillStyle = C("--bump"); ctx.beginPath(); ctx.moveTo(PX(b.x0), PZ(0)); ctx.lineTo(PX(b.x0 + b.w), PZ(b.h)); ctx.lineTo(PX(b.x0 + 2 * b.w), PZ(0)); ctx.closePath(); ctx.fill();
+    // regla
+    ctx.fillStyle = C("--ink-2"); ctx.font = `11px ${C("--font-mono")}`;
+    for (let m = 0; m <= 3; m++) { ctx.fillRect(PX(m), PZ(0) + 2, 1, 6); ctx.fillText(m + " m", PX(m) + 3, PZ(0) + 14); }
+    // robot: transformar puntos del cuerpo (s, z) al mundo
+    const cs = Math.cos(f.th), sn = Math.sin(f.th), cgS = D.cgS, cgZ = D.cg;
+    const T = (ps, pz) => { const rs = ps - cgS, rz = pz - cgZ; return [f.x + cs * rs - sn * rz, f.z + sn * rs + cs * rz]; };
+    const pts = prof.points; const lift = c.lift;
+    ctx.beginPath();
+    pts.forEach((p, i) => { const [wx, wz] = T(p[0], p[1] + lift); i ? ctx.lineTo(PX(wx), PZ(wz)) : ctx.moveTo(PX(wx), PZ(wz)); });
+    for (let i = pts.length - 1; i >= 0; i--) { const [wx, wz] = T(pts[i][0], pts[i][2] + lift); ctx.lineTo(PX(wx), PZ(wz)); }
+    ctx.closePath(); ctx.fillStyle = C("--robot-fill"); ctx.fill(); ctx.strokeStyle = C("--robot"); ctx.lineWidth = 1.5; ctx.stroke();
+    // parte de abajo tocando
+    if (f.body > 0 && f.bx !== null) {
+      const [hx, hz] = T(f.bx, (pts.reduce((a, p) => Math.abs(p[0] - f.bx) < Math.abs(a[0] - f.bx) ? p : a)[1]) + lift);
+      ctx.fillStyle = C("--hit"); ctx.beginPath(); ctx.arc(PX(hx), PZ(hz), 7, 0, 2 * Math.PI); ctx.fill();
+      ctx.font = `600 12px ${C("--font-body")}`; ctx.fillText(`${Math.round(f.body)} N`, PX(hx) + 10, PZ(hz) + 18);
+    }
+    // ruedas
+    prof.axles.forEach((ax, j) => {
+      const [wx, wz] = T(ax[0], D.R); const lifted = !(f.N[j] > 0);
+      ctx.strokeStyle = C("--wheel"); ctx.lineWidth = 2; ctx.setLineDash(lifted ? [3, 3] : []);
+      ctx.beginPath(); ctx.arc(PX(wx), PZ(wz), D.R * s, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C("--wheel"); ctx.font = `600 11px ${C("--font-mono")}`; ctx.textAlign = "center";
+      ctx.fillText(String(ax[1]), PX(wx), PZ(wz) + 4); ctx.textAlign = "left";
+    });
+    $("time").textContent = t.toFixed(2) + " s";
+    $("scrub").value = Math.round(t / dur() * 1000);
+  }
+  const dur = () => { const c = cur(); return c.trace.t.length * D.dt; };
+  $("play").onclick = () => { playing = !playing; $("play").textContent = playing ? "Pausa" : "Reproducir"; $("play").setAttribute("aria-pressed", String(!playing)); };
+  $("rate").onchange = e => rate = parseFloat(e.target.value);
+  $("scrub").oninput = e => { t = e.target.value / 1000 * dur(); draw(); };
+  let last = null;
+  function tick(ts) { if (last !== null && playing) { t += (ts - last) / 1000 * rate; if (t > dur() + 0.5) t = 0; draw(); } last = ts; requestAnimationFrame(tick); }
+  window.addEventListener("resize", resize);
+  render(); resize(); requestAnimationFrame(tick);
+})();
+</script>

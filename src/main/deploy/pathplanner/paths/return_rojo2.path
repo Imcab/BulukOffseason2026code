@@ -1,0 +1,63 @@
+{
+  "version": "2025.0",
+  "waypoints": [
+    {
+      "anchor": {
+        "x": 8.805944444444444,
+        "y": 3.323655555555555
+      },
+      "prevControl": null,
+      "nextControl": {
+        "x": 9.395663338088445,
+        "y": 2.4111982881597713
+      },
+      "isLocked": false,
+      "linkedName": "regreso_rojo2"
+    },
+    {
+      "anchor": {
+        "x": 14.028966666666667,
+        "y": 2.4076777777777774
+      },
+      "prevControl": {
+        "x": 13.7074,
+        "y": 2.271255555555555
+      },
+      "nextControl": null,
+      "isLocked": false,
+      "linkedName": null
+    }
+  ],
+  "rotationTargets": [
+    {
+      "waypointRelativePos": 0.35,
+      "rotationDegrees": 0.0
+    },
+    {
+      "waypointRelativePos": 0.8,
+      "rotationDegrees": 0.0
+    }
+  ],
+  "constraintZones": [],
+  "pointTowardsZones": [],
+  "eventMarkers": [],
+  "globalConstraints": {
+    "maxVelocity": 4.5,
+    "maxAcceleration": 4.0,
+    "maxAngularVelocity": 540.0,
+    "maxAngularAcceleration": 720.0,
+    "nominalVoltage": 12.0,
+    "unlimited": false
+  },
+  "goalEndState": {
+    "velocity": 0,
+    "rotation": -37.718706398952605
+  },
+  "reversed": false,
+  "folder": null,
+  "idealStartingState": {
+    "velocity": 0,
+    "rotation": -91.61353893288116
+  },
+  "useDefaultConstraints": true
+}
