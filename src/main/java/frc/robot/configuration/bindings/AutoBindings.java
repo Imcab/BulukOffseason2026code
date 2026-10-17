@@ -74,22 +74,38 @@ public class AutoBindings implements Binding {
         intake
             .setControl(
                 () ->
-                    IntakeRequestFactory.setAngle().withAngle(60).withMode(intakeMODE.kDOWN))
-            .withTimeout(1.2));
+                    IntakeRequestFactory.moveVoltage().withVolts(12))
+            .withTimeout(0.5));
  
     // LT del operator: ruedas del intake (comer)
     NamedCommands.registerCommand(
         "Intake_eat",
         intakFlywheels
             .setControl(() -> FlywheelsRequestFactory.setRPM().toRPM(-5000))
-            .withTimeout(4));
- 
-    // No existe en el operator: es el LT al reves (escupir)
+            .withTimeout(3));
+
+                // Alinear a la posicion de tiro del hub (mismos HubAlign que el driver). El comando termina
+    // solo (ajuste fino con timeout propio); el withTimeout es un seguro por si el pathfinding se
+    // atora.
+    // D-pad izquierda del driver
     NamedCommands.registerCommand(
-        "Intake_vomit",
-        intakFlywheels
-            .setControl(() -> FlywheelsRequestFactory.setRPM().toRPM(5000))
-            .withTimeout(1));
+        "Alinear_izquierda",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.IZQUIERDA_30)
+            .withTimeout(5));
+ 
+    // Posicion centrada (la de default en el selector del driver, boton B)
+    NamedCommands.registerCommand(
+        "Alinear_centro",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.CENTRO)
+            .withTimeout(5));
+ 
+    // D-pad derecha del driver
+    NamedCommands.registerCommand(
+        "Alinear_derecha",
+        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.DERECHA_30)
+            .withTimeout(5));
+ 
+
  
     // RT del operator: shooter a kShootRPM; cuando llega, el indexer libera las piezas.
     // Una vez que empieza a liberar sigue alimentando aunque las RPM bajen por el disparo.
@@ -121,26 +137,7 @@ public class AutoBindings implements Binding {
                             () -> shooter.isAtRPM(shooterWheelsConstants.kShootRPM, 400))))
             .withTimeout(4));
  
-    // Alinear a la posicion de tiro del hub (mismos HubAlign que el driver). El comando termina
-    // solo (ajuste fino con timeout propio); el withTimeout es un seguro por si el pathfinding se
-    // atora.
-    // D-pad izquierda del driver
-    NamedCommands.registerCommand(
-        "Alinear_izquierda",
-        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.IZQUIERDA_30)
-            .withTimeout(6));
- 
-    // Posicion centrada (la de default en el selector del driver, boton B)
-    NamedCommands.registerCommand(
-        "Alinear_centro",
-        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.CENTRO)
-            .withTimeout(6));
- 
-    // D-pad derecha del driver
-    NamedCommands.registerCommand(
-        "Alinear_derecha",
-        HubAlign.command(drivetrain, secondsSinceVision, () -> HubShotSpot.DERECHA_30)
-            .withTimeout(6));
+
   }
      
 
@@ -149,7 +146,7 @@ public class AutoBindings implements Binding {
     public void bind() {
     registerAutoCommands();
 
-     backshootCenter = new PathPlannerAuto("backshoot_center");
+    backshootCenter = new PathPlannerAuto("backshoot_center");
     backshootDown = new PathPlannerAuto("backshoot_down");
     backshootUp = new PathPlannerAuto("backshoot_up");
  

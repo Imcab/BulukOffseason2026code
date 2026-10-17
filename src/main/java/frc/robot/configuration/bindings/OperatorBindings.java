@@ -116,7 +116,7 @@ private final double DEADBAND = 0.1;
         .whileTrue(
             intake.setControl(
                 () ->
-                    IntakeRequestFactory.setAngle().withAngle(60).withMode(intakeMODE.kDOWN)));
+                    IntakeRequestFactory.moveVoltage().withVolts(12)));
 
 
 
@@ -141,6 +141,12 @@ private final double DEADBAND = 0.1;
     triggers.left().whileTrue(
         intakFlywheels.setControl(
             () -> FlywheelsRequestFactory.setRPM().toRPM(-5000)
+        )
+    );
+
+    buttons.right().whileTrue(
+        intakFlywheels.setControl(
+            () -> FlywheelsRequestFactory.setRPM().toRPM(5000)
         )
     );
 

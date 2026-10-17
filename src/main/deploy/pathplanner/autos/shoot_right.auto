@@ -11,12 +11,6 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "Intake_down"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "Copy of cruce 1.2"
@@ -26,6 +20,12 @@
           "type": "path",
           "data": {
             "pathName": "recolectar 2.0"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake_down"
           }
         },
         {
